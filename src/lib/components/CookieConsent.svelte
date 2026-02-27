@@ -20,7 +20,7 @@
 </script>
 
 {#if visible}
-	<div class="fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-4 z-40 shadow-lg">
+	<div class="fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-4 pr-20 z-50 shadow-lg">
 		<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
 			<p class="text-sm text-text-muted text-center sm:text-left">
 				We use cookies to improve your experience. By continuing to browse, you agree to our
