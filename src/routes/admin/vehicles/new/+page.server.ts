@@ -43,7 +43,7 @@ export const actions: Actions = {
 				trim: trim || null,
 				bodyType: formData.get('bodyType')?.toString() || null,
 				condition: formData.get('condition')?.toString() || null,
-				status: formData.get('status')?.toString() || 'AVAILABLE',
+				status: formData.get('status')?.toString() || 'ACTIVE',
 				mileage: parseInt(formData.get('mileage')?.toString() ?? '') || null,
 				engine: formData.get('engine')?.toString().trim() || null,
 				transmission: formData.get('transmission')?.toString() || null,

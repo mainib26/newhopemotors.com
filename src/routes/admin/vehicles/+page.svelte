@@ -20,10 +20,11 @@
 	}
 
 	const statusVariant: Record<string, string> = {
-		AVAILABLE: 'success',
-		PENDING: 'warning',
+		ACTIVE: 'success',
+		INCOMING: 'warning',
+		IN_RECON: 'warning',
 		SOLD: 'default',
-		WHOLESALE: 'default'
+		DELETED: 'default'
 	};
 </script>
 
@@ -52,10 +53,10 @@
 			class="px-3 py-2 text-sm border border-border rounded-[var(--radius-button)] bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary"
 		>
 			<option value="">All Statuses</option>
-			<option value="AVAILABLE">Available</option>
-			<option value="PENDING">Pending</option>
+			<option value="ACTIVE">Active</option>
+			<option value="INCOMING">Incoming</option>
+			<option value="IN_RECON">In Recon</option>
 			<option value="SOLD">Sold</option>
-			<option value="WHOLESALE">Wholesale</option>
 		</select>
 		<span class="text-sm text-text-muted self-center">{data.total} vehicles</span>
 	</div>

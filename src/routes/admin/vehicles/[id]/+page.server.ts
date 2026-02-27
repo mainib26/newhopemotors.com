@@ -34,7 +34,7 @@ export const actions: Actions = {
 		}
 
 		const prisma = await db();
-		const status = formData.get('status')?.toString() || 'AVAILABLE';
+		const status = formData.get('status')?.toString() || 'ACTIVE';
 
 		await prisma.vehicle.update({
 			where: { id: params.id },

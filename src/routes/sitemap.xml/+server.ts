@@ -5,7 +5,7 @@ export const GET: RequestHandler = async () => {
 	const prisma = await db();
 
 	const vehicles = await prisma.vehicle.findMany({
-		where: { status: 'AVAILABLE' },
+		where: { status: 'ACTIVE' },
 		select: { slug: true, updatedAt: true }
 	});
 

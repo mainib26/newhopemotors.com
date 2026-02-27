@@ -65,10 +65,11 @@
 	];
 
 	const statuses = [
-		{ value: 'AVAILABLE', label: 'Available' },
-		{ value: 'PENDING', label: 'Pending' },
+		{ value: 'ACTIVE', label: 'Active' },
+		{ value: 'INCOMING', label: 'Incoming' },
+		{ value: 'IN_RECON', label: 'In Recon' },
 		{ value: 'SOLD', label: 'Sold' },
-		{ value: 'WHOLESALE', label: 'Wholesale' }
+		{ value: 'DELETED', label: 'Deleted' }
 	];
 
 	const transmissions = [
@@ -134,7 +135,7 @@
 			</div>
 			<div class="space-y-1.5">
 				<label for="status" class="block text-sm font-medium text-text">Status</label>
-				<select id="status" name="status" class={selectClass} value={vehicle.status ?? 'AVAILABLE'}>
+				<select id="status" name="status" class={selectClass} value={vehicle.status ?? 'ACTIVE'}>
 					{#each statuses as opt}<option value={opt.value}>{opt.label}</option>{/each}
 				</select>
 			</div>

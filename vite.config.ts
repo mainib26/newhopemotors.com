@@ -8,5 +8,9 @@ export default defineConfig({
 		alias: {
 			'.prisma/client': './src/generated/prisma'
 		}
+	},
+	ssr: {
+		noExternal: ['@prisma/adapter-pg'],
+		external: ['pg']
 	}
 });

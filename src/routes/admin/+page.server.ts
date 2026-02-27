@@ -19,7 +19,7 @@ export const load: PageServerLoad = async () => {
 		leadsByStatus
 	] = await Promise.all([
 		prisma.vehicle.count(),
-		prisma.vehicle.count({ where: { status: 'AVAILABLE' } }),
+		prisma.vehicle.count({ where: { status: 'ACTIVE' } }),
 		prisma.lead.count({ where: { createdAt: { gte: startOfDay } } }),
 		prisma.lead.count(),
 		prisma.appointment.count({ where: { date: { gte: startOfDay } } }),

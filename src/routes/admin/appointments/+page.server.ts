@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	});
 
 	const vehicles = await prisma.vehicle.findMany({
-		where: { status: 'AVAILABLE' },
+		where: { status: 'ACTIVE' },
 		select: { id: true, year: true, make: true, model: true },
 		orderBy: { createdAt: 'desc' }
 	});
