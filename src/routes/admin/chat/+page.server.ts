@@ -5,7 +5,7 @@ export const load: PageServerLoad = async () => {
 	const prisma = await db();
 
 	const conversations = await prisma.chatConversation.findMany({
-		orderBy: { updatedAt: 'desc' },
+		orderBy: { createdAt: 'desc' },
 		include: {
 			lead: { select: { firstName: true, lastName: true } },
 			_count: { select: { messages: true } }
@@ -19,8 +19,7 @@ export const load: PageServerLoad = async () => {
 			sessionId: c.sessionId,
 			leadName: c.lead ? `${c.lead.firstName} ${c.lead.lastName ?? ''}`.trim() : null,
 			messageCount: c._count.messages,
-			createdAt: c.createdAt.toISOString(),
-			updatedAt: c.updatedAt.toISOString()
+			createdAt: c.createdAt.toISOString()
 		}))
 	};
 };

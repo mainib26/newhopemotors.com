@@ -7,7 +7,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const prisma = await db();
 
 	const users = await prisma.user.findMany({
-		select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+		select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
 		orderBy: { createdAt: 'asc' }
 	});
 
@@ -53,11 +53,11 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const userId = formData.get('userId')?.toString();
-		const active = formData.get('active') === 'true';
+		const isActive = formData.get('isActive') === 'true';
 		if (!userId) return fail(400);
 
 		const prisma = await db();
-		await prisma.user.update({ where: { id: userId }, data: { active } });
+		await prisma.user.update({ where: { id: userId }, data: { isActive } });
 		return { userToggled: true };
 	}
 };

@@ -36,19 +36,22 @@ export const actions: Actions = {
 		const prisma = await db();
 		const status = formData.get('status')?.toString() || 'ACTIVE';
 
+		const mileage = parseInt(formData.get('mileage')?.toString() ?? '') || 0;
+		const featuresRaw = formData.get('features')?.toString().split('\n').map(f => f.trim()).filter(Boolean) ?? [];
+
 		await prisma.vehicle.update({
 			where: { id: params.id },
 			data: {
-				vin: formData.get('vin')?.toString().trim() || null,
+				vin: formData.get('vin')?.toString().trim() || undefined,
 				stockNumber: formData.get('stockNumber')?.toString().trim() || null,
 				year,
 				make,
 				model,
 				trim: formData.get('trim')?.toString().trim() || null,
-				bodyType: formData.get('bodyType')?.toString() || null,
-				condition: formData.get('condition')?.toString() || null,
-				status,
-				mileage: parseInt(formData.get('mileage')?.toString() ?? '') || null,
+				bodyType: (formData.get('bodyType')?.toString() || 'SEDAN') as any,
+				condition: (formData.get('condition')?.toString() || 'GOOD') as any,
+				status: status as any,
+				mileage,
 				engine: formData.get('engine')?.toString().trim() || null,
 				transmission: formData.get('transmission')?.toString() || null,
 				drivetrain: formData.get('drivetrain')?.toString() || null,
@@ -57,8 +60,7 @@ export const actions: Actions = {
 				price,
 				internetPrice: parseFloat(formData.get('internetPrice')?.toString() ?? '') || null,
 				description: formData.get('description')?.toString().trim() || null,
-				features: formData.get('features')?.toString().split('\n').map(f => f.trim()).filter(Boolean) ?? [],
-				soldDate: status === 'SOLD' ? new Date() : null
+				features: JSON.stringify(featuresRaw)
 			}
 		});
 

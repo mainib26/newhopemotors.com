@@ -64,13 +64,13 @@
 							<td class="py-2 text-text">{user.name}</td>
 							<td class="py-2 text-text-muted">{user.email}</td>
 							<td class="py-2"><Badge variant={user.role === 'ADMIN' ? 'primary' : 'default'}>{user.role}</Badge></td>
-							<td class="py-2"><Badge variant={user.active ? 'success' : 'default'}>{user.active ? 'Active' : 'Inactive'}</Badge></td>
+							<td class="py-2"><Badge variant={user.isActive ? 'success' : 'default'}>{user.isActive ? 'Active' : 'Inactive'}</Badge></td>
 							<td class="py-2">
 								<form method="POST" action="?/toggleUser" use:enhance>
 									<input type="hidden" name="userId" value={user.id} />
-									<input type="hidden" name="active" value={user.active ? 'false' : 'true'} />
+									<input type="hidden" name="isActive" value={user.isActive ? 'false' : 'true'} />
 									<button type="submit" class="text-xs text-primary hover:underline">
-										{user.active ? 'Deactivate' : 'Activate'}
+										{user.isActive ? 'Deactivate' : 'Activate'}
 									</button>
 								</form>
 							</td>

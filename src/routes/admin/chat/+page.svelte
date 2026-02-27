@@ -33,7 +33,7 @@
 							</td>
 							<td class="px-4 py-2.5 text-text">{conv.leadName ?? '—'}</td>
 							<td class="px-4 py-2.5 text-text-muted">{conv.messageCount}</td>
-							<td class="px-4 py-2.5 text-text-muted text-right">{timeAgo(conv.updatedAt)}</td>
+							<td class="px-4 py-2.5 text-text-muted text-right">{timeAgo(conv.createdAt)}</td>
 						</tr>
 					{/each}
 					{#if data.conversations.length === 0}
