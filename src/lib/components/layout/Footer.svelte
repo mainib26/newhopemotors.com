@@ -108,7 +108,7 @@
 				<div class="flex flex-col md:flex-row items-center gap-2 md:gap-4">
 					<span>&copy; {currentYear} New Hope Motors. All rights reserved.</span>
 					<span class="hidden md:inline">·</span>
-					<span>Texas Dealer License #P000000</span>
+					<span>Licensed Texas Dealer</span>
 				</div>
 				<p class="text-center md:text-right max-w-lg">
 					Prices exclude tax, title, license &amp; dealer doc fee ($150). See dealer for details. All vehicles subject to prior sale.
