@@ -7,6 +7,9 @@
 	import SimilarVehicles from '$lib/components/vehicle/SimilarVehicles.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
+	import LeadForm from '$lib/components/forms/LeadForm.svelte';
+	import TestDriveForm from '$lib/components/forms/TestDriveForm.svelte';
+	import QuestionForm from '$lib/components/forms/QuestionForm.svelte';
 
 	let { data } = $props();
 	const v = $derived(data.vehicle);
@@ -147,18 +150,15 @@
 	<SimilarVehicles vehicles={data.similar} />
 </div>
 
-<!-- Modals (placeholders — will be wired to lead forms in Task 7) -->
 <Modal bind:open={testDriveOpen} onclose={() => (testDriveOpen = false)} title="Schedule a Test Drive">
-	<p class="text-text-muted mb-4">Interested in the {vehicleName}? Fill out the form below and we'll get back to you right away.</p>
-	<p class="text-sm text-text-light">Lead form coming in Task 7...</p>
+	<TestDriveForm vehicleId={v.id} {vehicleName} onSuccess={() => setTimeout(() => (testDriveOpen = false), 3000)} />
 </Modal>
 
 <Modal bind:open={offerOpen} onclose={() => (offerOpen = false)} title="Make an Offer">
-	<p class="text-text-muted mb-4">Tell us what you'd like to pay for the {vehicleName}.</p>
-	<p class="text-sm text-text-light">Lead form coming in Task 7...</p>
+	<p class="text-text-muted mb-4">Interested in the {vehicleName}? Tell us a bit about yourself and we'll work out a deal.</p>
+	<LeadForm vehicleId={v.id} submitLabel="Submit Offer" onSuccess={() => setTimeout(() => (offerOpen = false), 3000)} />
 </Modal>
 
 <Modal bind:open={questionOpen} onclose={() => (questionOpen = false)} title="Ask a Question">
-	<p class="text-text-muted mb-4">Have a question about the {vehicleName}? We're happy to help.</p>
-	<p class="text-sm text-text-light">Lead form coming in Task 7...</p>
+	<QuestionForm vehicleId={v.id} {vehicleName} onSuccess={() => setTimeout(() => (questionOpen = false), 3000)} />
 </Modal>
