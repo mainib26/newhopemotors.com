@@ -4,14 +4,9 @@
 </svelte:head>
 
 <div class="bg-background">
-	<div class="bg-primary py-10">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<h1 class="text-3xl font-heading font-bold text-white">Privacy Policy</h1>
-			<p class="mt-2 text-white/70">Last updated: February 2026</p>
-		</div>
-	</div>
-
-	<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-sm max-w-none">
+	<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12 prose prose-sm max-w-none">
+		<h1 class="text-3xl font-heading font-bold text-text">Privacy Policy</h1>
+		<p class="text-sm text-text-muted mb-8">Last updated: February 2026</p>
 		<div class="space-y-8 text-text-muted leading-relaxed text-sm">
 			<section>
 				<h2 class="text-lg font-heading font-bold text-text">Information We Collect</h2>
