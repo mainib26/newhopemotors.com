@@ -3,6 +3,7 @@
 	import Header from '$lib/components/layout/Header.svelte';
 	import Footer from '$lib/components/layout/Footer.svelte';
 	import ChatWidget from '$lib/components/chat/ChatWidget.svelte';
+	import CookieConsent from '$lib/components/CookieConsent.svelte';
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
 
@@ -26,5 +27,6 @@
 		</main>
 		<Footer />
 		<ChatWidget />
+		<CookieConsent />
 	</div>
 {/if}
