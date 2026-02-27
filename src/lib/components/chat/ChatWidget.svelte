@@ -19,6 +19,60 @@
 	}
 
 	let bottomClass = $derived(cookieBannerVisible ? 'bottom-20' : 'bottom-6');
+	let onDarkBg = $state(false);
+	let chatBtnEl: HTMLButtonElement;
+
+	function getLuminance(r: number, g: number, b: number): number {
+		const [rs, gs, bs] = [r, g, b].map(c => {
+			c /= 255;
+			return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+		});
+		return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+	}
+
+	function parseBgColor(color: string): [number, number, number, number] | null {
+		const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+		if (!match) return null;
+		return [+match[1], +match[2], +match[3], match[4] !== undefined ? +match[4] : 1];
+	}
+
+	function checkBackground() {
+		if (!chatBtnEl || open) return;
+		const rect = chatBtnEl.getBoundingClientRect();
+		const cx = rect.left + rect.width / 2;
+		const cy = rect.top + rect.height / 2;
+
+		// Temporarily hide the button so elementFromPoint hits what's behind it
+		chatBtnEl.style.pointerEvents = 'none';
+		chatBtnEl.style.visibility = 'hidden';
+		const el = document.elementFromPoint(cx, cy);
+		chatBtnEl.style.pointerEvents = '';
+		chatBtnEl.style.visibility = '';
+
+		if (!el) return;
+
+		// Walk up the DOM to find the first non-transparent background
+		let node: Element | null = el;
+		while (node && node !== document.documentElement) {
+			const bg = getComputedStyle(node).backgroundColor;
+			const parsed = parseBgColor(bg);
+			if (parsed && parsed[3] > 0.1) {
+				onDarkBg = getLuminance(parsed[0], parsed[1], parsed[2]) < 0.4;
+				return;
+			}
+			node = node.parentElement;
+		}
+		onDarkBg = false;
+	}
+
+	if (browser) {
+		// Check on scroll and resize
+		const throttledCheck = () => requestAnimationFrame(checkBackground);
+		window.addEventListener('scroll', throttledCheck, { passive: true });
+		window.addEventListener('resize', throttledCheck, { passive: true });
+		// Initial check after mount
+		setTimeout(checkBackground, 100);
+	}
 
 	const quickReplies = [
 		'Browse Inventory',
@@ -70,8 +124,9 @@
 <!-- Floating Button -->
 {#if !open}
 	<button
+		bind:this={chatBtnEl}
 		onclick={() => open = true}
-		class="fixed {bottomClass} right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center z-50"
+		class="fixed {bottomClass} right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center z-50 {onDarkBg ? 'bg-white text-primary hover:bg-white/90' : 'bg-primary text-white hover:bg-primary/90'}"
 		aria-label="Open chat"
 	>
 		<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
