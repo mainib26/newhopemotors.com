@@ -19,11 +19,9 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p);
 	}
 
-	let confirmDeleteId = $state<string | null>(null);
-
 	async function deleteVehicle(id: string) {
+		if (!confirm('Are you sure you want to delete this vehicle?')) return;
 		await fetch(`/api/admin/vehicles/${id}`, { method: 'DELETE' });
-		confirmDeleteId = null;
 		window.location.reload();
 	}
 
@@ -109,13 +107,7 @@
 							<td class="px-4 py-2">
 								<div class="flex items-center gap-3">
 									<a href="/admin/vehicles/{v.id}" class="text-primary text-sm hover:underline">Edit</a>
-									{#if confirmDeleteId === v.id}
-										<span class="text-xs text-text-muted">Sure?</span>
-										<button onclick={() => deleteVehicle(v.id)} class="text-red-600 text-sm font-medium hover:underline">Yes</button>
-										<button onclick={() => confirmDeleteId = null} class="text-text-muted text-sm hover:underline">No</button>
-									{:else}
-										<button onclick={() => confirmDeleteId = v.id} class="text-red-500 text-sm hover:underline">Delete</button>
-									{/if}
+									<button onclick={() => deleteVehicle(v.id)} class="text-red-500 text-sm hover:underline">Delete</button>
 								</div>
 							</td>
 						</tr>
