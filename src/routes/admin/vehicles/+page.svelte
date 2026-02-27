@@ -19,9 +19,15 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p);
 	}
 
-	async function deleteVehicle(id: string) {
-		if (!confirm('Are you sure you want to delete this vehicle?')) return;
-		await fetch(`/api/admin/vehicles/${id}`, { method: 'DELETE' });
+	let deleteTarget = $state<{ id: string; name: string } | null>(null);
+	let deleting = $state(false);
+
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		deleting = true;
+		await fetch(`/api/admin/vehicles/${deleteTarget.id}`, { method: 'DELETE' });
+		deleteTarget = null;
+		deleting = false;
 		window.location.reload();
 	}
 
@@ -107,7 +113,7 @@
 							<td class="px-4 py-2">
 								<div class="flex items-center gap-3">
 									<a href="/admin/vehicles/{v.id}" class="text-primary text-sm hover:underline">Edit</a>
-									<button onclick={() => deleteVehicle(v.id)} class="text-red-500 text-sm hover:underline">Delete</button>
+									<button onclick={() => deleteTarget = { id: v.id, name: `${v.year} ${v.make} ${v.model}` }} class="text-red-500 text-sm hover:underline">Delete</button>
 								</div>
 							</td>
 						</tr>
@@ -136,3 +142,30 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Delete Confirmation Modal -->
+{#if deleteTarget}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center"
+		onkeydown={(e) => e.key === 'Escape' && (deleteTarget = null)}
+	>
+		<div class="absolute inset-0 bg-black/50" onclick={() => deleteTarget = null}></div>
+		<div class="relative bg-surface rounded-[var(--radius-card)] shadow-xl p-6 w-full max-w-sm mx-4">
+			<h3 class="text-lg font-heading font-bold text-text">Delete Vehicle</h3>
+			<p class="mt-2 text-sm text-text-muted">
+				Are you sure you want to delete <strong class="text-text">{deleteTarget.name}</strong>? This action cannot be undone.
+			</p>
+			<div class="mt-6 flex justify-end gap-3">
+				<Button variant="secondary" onclick={() => deleteTarget = null} disabled={deleting}>Cancel</Button>
+				<button
+					onclick={confirmDelete}
+					disabled={deleting}
+					class="px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-[var(--radius-button)] hover:bg-red-700 disabled:opacity-50 transition-colors"
+				>
+					{deleting ? 'Deleting...' : 'Delete'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
