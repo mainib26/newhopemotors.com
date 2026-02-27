@@ -57,7 +57,7 @@
 {#if !open}
 	<button
 		onclick={() => open = true}
-		class="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center z-50"
+		class="fixed bottom-20 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center z-50"
 		aria-label="Open chat"
 	>
 		<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,7 +68,7 @@
 
 <!-- Chat Panel -->
 {#if open}
-	<div class="fixed bottom-6 right-6 w-[360px] h-[520px] bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50">
+	<div class="fixed bottom-20 right-6 w-[360px] h-[520px] bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50">
 		<!-- Header -->
 		<div class="bg-primary px-4 py-3 flex items-center justify-between shrink-0">
 			<div class="flex items-center gap-2">
