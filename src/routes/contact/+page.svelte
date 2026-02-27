@@ -57,15 +57,7 @@
 </svelte:head>
 
 <div class="bg-background">
-	<!-- Header -->
-	<div class="bg-primary py-10">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<h1 class="text-3xl sm:text-4xl font-heading font-bold text-white">Contact Us</h1>
-			<p class="mt-2 text-white/70">We'd love to hear from you. Reach out anytime.</p>
-		</div>
-	</div>
-
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
 			<!-- Contact Form -->
 			<div>

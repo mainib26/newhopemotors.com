@@ -9,14 +9,6 @@
 </svelte:head>
 
 <div class="bg-background">
-	<!-- Header -->
-	<div class="bg-primary py-10">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<h1 class="text-3xl sm:text-4xl font-heading font-bold text-white">About New Hope Motors</h1>
-			<p class="mt-2 text-white/70">Your neighbor, not a sales floor.</p>
-		</div>
-	</div>
-
 	<!-- Daniel's Story -->
 	<section class="py-16">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
