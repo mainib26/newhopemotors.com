@@ -2,18 +2,16 @@ import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes, pbkdf2Sync } from 'crypto';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 function hashPassword(password: string): string {
-	const salt = randomBytes(16).toString('hex');
-	const hash = createHash('sha256')
-		.update(password + salt)
-		.digest('hex');
-	return `${salt}:${hash}`;
+	const salt = randomBytes(16);
+	const hash = pbkdf2Sync(password, salt, 100000, 32, 'sha256');
+	return `${salt.toString('hex')}:${hash.toString('hex')}`;
 }
 
 function generateSlug(year: number, make: string, model: string, trim: string | null, vin: string): string {
