@@ -1,0 +1,13 @@
+name = "newhopemotors"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# Hyperdrive — connects to Neon PostgreSQL in production
+# Uncomment after creating the Hyperdrive config in Cloudflare dashboard
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<your-hyperdrive-config-id>"
+
+[vars]
+PUBLIC_SITE_URL = "https://newhopemotors.com"
