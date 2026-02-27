@@ -19,6 +19,14 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p);
 	}
 
+	let confirmDeleteId = $state<string | null>(null);
+
+	async function deleteVehicle(id: string) {
+		await fetch(`/api/admin/vehicles/${id}`, { method: 'DELETE' });
+		confirmDeleteId = null;
+		window.location.reload();
+	}
+
 	const statusVariant: Record<string, string> = {
 		ACTIVE: 'success',
 		INCOMING: 'warning',
@@ -99,7 +107,16 @@
 							<td class="px-4 py-2"><Badge variant={statusVariant[v.status] ?? 'default'}>{v.status}</Badge></td>
 							<td class="px-4 py-2 text-text-muted">{v.daysOnLot}d</td>
 							<td class="px-4 py-2">
-								<a href="/admin/vehicles/{v.id}" class="text-primary text-sm hover:underline">Edit</a>
+								<div class="flex items-center gap-3">
+									<a href="/admin/vehicles/{v.id}" class="text-primary text-sm hover:underline">Edit</a>
+									{#if confirmDeleteId === v.id}
+										<span class="text-xs text-text-muted">Sure?</span>
+										<button onclick={() => deleteVehicle(v.id)} class="text-red-600 text-sm font-medium hover:underline">Yes</button>
+										<button onclick={() => confirmDeleteId = null} class="text-text-muted text-sm hover:underline">No</button>
+									{:else}
+										<button onclick={() => confirmDeleteId = v.id} class="text-red-500 text-sm hover:underline">Delete</button>
+									{/if}
+								</div>
 							</td>
 						</tr>
 					{/each}
