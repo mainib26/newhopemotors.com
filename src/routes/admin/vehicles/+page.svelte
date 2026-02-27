@@ -1,0 +1,128 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+
+	let { data } = $props();
+
+	let search = $state(data.filters.search);
+	let statusFilter = $state(data.filters.status);
+
+	function applyFilters() {
+		const params = new URLSearchParams();
+		if (search) params.set('q', search);
+		if (statusFilter) params.set('status', statusFilter);
+		goto(`/admin/vehicles?${params.toString()}`);
+	}
+
+	function formatPrice(p: number) {
+		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p);
+	}
+
+	const statusVariant: Record<string, string> = {
+		AVAILABLE: 'success',
+		PENDING: 'warning',
+		SOLD: 'default',
+		WHOLESALE: 'default'
+	};
+</script>
+
+<svelte:head>
+	<title>Vehicles — Admin</title>
+</svelte:head>
+
+<div class="space-y-6">
+	<div class="flex items-center justify-between">
+		<h1 class="text-2xl font-heading font-bold text-text">Vehicles</h1>
+		<Button href="/admin/vehicles/new">+ Add Vehicle</Button>
+	</div>
+
+	<!-- Filters -->
+	<div class="flex flex-wrap gap-3">
+		<input
+			type="text"
+			placeholder="Search make, model, VIN, stock#..."
+			bind:value={search}
+			onkeydown={(e) => e.key === 'Enter' && applyFilters()}
+			class="px-3 py-2 text-sm border border-border rounded-[var(--radius-button)] bg-surface text-text w-64 focus:outline-none focus:ring-2 focus:ring-primary"
+		/>
+		<select
+			bind:value={statusFilter}
+			onchange={applyFilters}
+			class="px-3 py-2 text-sm border border-border rounded-[var(--radius-button)] bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary"
+		>
+			<option value="">All Statuses</option>
+			<option value="AVAILABLE">Available</option>
+			<option value="PENDING">Pending</option>
+			<option value="SOLD">Sold</option>
+			<option value="WHOLESALE">Wholesale</option>
+		</select>
+		<span class="text-sm text-text-muted self-center">{data.total} vehicles</span>
+	</div>
+
+	<!-- Table -->
+	<div class="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+		<div class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead>
+					<tr class="bg-background border-b border-border text-left">
+						<th class="px-4 py-3 font-medium text-text-muted">Photo</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Stock #</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Vehicle</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Price</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Mileage</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Status</th>
+						<th class="px-4 py-3 font-medium text-text-muted">Days</th>
+						<th class="px-4 py-3"></th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.vehicles as v}
+						<tr class="border-b border-border/50 hover:bg-background/50">
+							<td class="px-4 py-2">
+								{#if v.photo}
+									<img src={v.photo} alt="" class="w-16 h-12 object-cover rounded" />
+								{:else}
+									<div class="w-16 h-12 bg-background rounded flex items-center justify-center text-text-light text-xs">No photo</div>
+								{/if}
+							</td>
+							<td class="px-4 py-2 font-mono text-xs text-text-muted">{v.stockNumber ?? '—'}</td>
+							<td class="px-4 py-2">
+								<a href="/admin/vehicles/{v.id}" class="font-medium text-text hover:text-primary">
+									{v.year} {v.make} {v.model}
+								</a>
+								{#if v.trim}<span class="text-text-muted"> {v.trim}</span>{/if}
+							</td>
+							<td class="px-4 py-2 font-medium text-text">{formatPrice(v.price)}</td>
+							<td class="px-4 py-2 text-text-muted">{v.mileage?.toLocaleString() ?? '—'} mi</td>
+							<td class="px-4 py-2"><Badge variant={statusVariant[v.status] ?? 'default'}>{v.status}</Badge></td>
+							<td class="px-4 py-2 text-text-muted">{v.daysOnLot}d</td>
+							<td class="px-4 py-2">
+								<a href="/admin/vehicles/{v.id}" class="text-primary text-sm hover:underline">Edit</a>
+							</td>
+						</tr>
+					{/each}
+					{#if data.vehicles.length === 0}
+						<tr><td colspan="8" class="px-4 py-12 text-center text-text-muted">No vehicles found</td></tr>
+					{/if}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<!-- Pagination -->
+	{#if data.totalPages > 1}
+		<div class="flex justify-center gap-2">
+			{#each Array.from({ length: data.totalPages }, (_, i) => i + 1) as p}
+				<a
+					href="/admin/vehicles?page={p}{statusFilter ? `&status=${statusFilter}` : ''}{search ? `&q=${search}` : ''}"
+					class="px-3 py-1 text-sm rounded-[var(--radius-button)] {p === data.page
+						? 'bg-primary text-white'
+						: 'bg-surface border border-border text-text hover:bg-background'}"
+				>
+					{p}
+				</a>
+			{/each}
+		</div>
+	{/if}
+</div>
