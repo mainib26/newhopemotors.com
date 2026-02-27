@@ -1,8 +1,17 @@
 <script lang="ts">
+	const creditTiers = [
+		{ label: 'Excellent', range: '750+', rate: 4.99 },
+		{ label: 'Good', range: '700–749', rate: 6.49 },
+		{ label: 'Fair', range: '650–699', rate: 9.49 },
+		{ label: 'Rebuilding', range: 'Under 650', rate: 13.99 }
+	];
+
 	let price = $state(30000);
 	let downPayment = $state(3000);
 	let term = $state(72);
-	let rate = $state(6.99);
+	let selectedTier = $state(1); // default to "Good"
+
+	let rate = $derived(creditTiers[selectedTier].rate);
 
 	let monthly = $derived(() => {
 		const principal = price - downPayment;
@@ -74,19 +83,21 @@
 					</select>
 				</div>
 
-				<!-- Interest Rate -->
+				<!-- Credit Score -->
 				<div class="space-y-2">
-					<label for="calc-rate" class="block text-sm font-medium text-text">Interest Rate</label>
-					<input
-						id="calc-rate"
-						type="range"
-						bind:value={rate}
-						min="0"
-						max="15"
-						step="0.25"
-						class="w-full accent-primary"
-					/>
-					<div class="text-right text-sm font-semibold text-primary">{rate.toFixed(2)}%</div>
+					<label class="block text-sm font-medium text-text">Credit Score</label>
+					<div class="grid grid-cols-2 gap-2">
+						{#each creditTiers as tier, i}
+							<button
+								type="button"
+								onclick={() => selectedTier = i}
+								class="px-3 py-2 text-xs rounded-[var(--radius-button)] border transition-colors text-left {selectedTier === i ? 'bg-primary text-white border-primary' : 'bg-surface text-text border-border hover:border-primary/50'}"
+							>
+								<span class="font-semibold">{tier.label}</span>
+								<span class="block text-[10px] {selectedTier === i ? 'text-white/70' : 'text-text-muted'}">{tier.range} · {tier.rate}% APR</span>
+							</button>
+						{/each}
+					</div>
 				</div>
 			</div>
 
@@ -102,7 +113,7 @@
 
 		<p class="mt-4 text-xs text-text-light text-center">
 			*For illustration purposes only. Does not include tax, title, license, or dealer fees.
-			Actual terms depend on credit approval. See dealer for details.
+			Rates shown are estimates based on credit tier and may vary. Actual terms depend on credit approval. See dealer for details.
 		</p>
 	</div>
 </section>
