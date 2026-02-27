@@ -23,7 +23,7 @@ export const load: PageServerLoad = async () => {
 		prisma.lead.count({ where: { createdAt: { gte: startOfDay } } }),
 		prisma.lead.count(),
 		prisma.appointment.count({ where: { date: { gte: startOfDay } } }),
-		prisma.vehicle.count({ where: { status: 'SOLD', soldDate: { gte: startOfMonth } } }),
+		prisma.vehicle.count({ where: { status: 'SOLD', updatedAt: { gte: startOfMonth } } }),
 		prisma.lead.findMany({
 			take: 10,
 			orderBy: { createdAt: 'desc' },
