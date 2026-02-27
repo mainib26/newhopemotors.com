@@ -7,8 +7,18 @@
 	let submitting = $state(false);
 	let showDeleteConfirm = $state(false);
 
-	// Photo upload state
+	// Photo state
 	let uploading = $state(false);
+	let photos = $state(data.vehicle.photos);
+	let dragIdx = $state<number | null>(null);
+	let overIdx = $state<number | null>(null);
+
+	// Auto-set primary if only one photo and none is primary
+	$effect(() => {
+		if (photos.length === 1 && !photos[0].isPrimary) {
+			setPrimaryPhoto(photos[0].id);
+		}
+	});
 
 	async function uploadPhoto(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -32,13 +42,52 @@
 	}
 
 	async function deletePhoto(photoId: string) {
+		photos = photos.filter(p => p.id !== photoId);
 		await fetch(`/api/admin/photos?id=${photoId}`, { method: 'DELETE' });
 		window.location.reload();
 	}
 
 	async function setPrimaryPhoto(photoId: string) {
+		photos = photos.map(p => ({ ...p, isPrimary: p.id === photoId }));
 		await fetch(`/api/admin/photos?id=${photoId}&vehicleId=${data.vehicle.id}`, { method: 'PATCH' });
-		window.location.reload();
+	}
+
+	// Drag and drop reordering
+	function handleDragStart(idx: number) {
+		dragIdx = idx;
+	}
+
+	function handleDragOver(e: DragEvent, idx: number) {
+		e.preventDefault();
+		overIdx = idx;
+	}
+
+	function handleDragLeave() {
+		overIdx = null;
+	}
+
+	async function handleDrop(e: DragEvent, dropIdx: number) {
+		e.preventDefault();
+		overIdx = null;
+		if (dragIdx === null || dragIdx === dropIdx) return;
+
+		const reordered = [...photos];
+		const [moved] = reordered.splice(dragIdx, 1);
+		reordered.splice(dropIdx, 0, moved);
+		photos = reordered;
+		dragIdx = null;
+
+		// Persist new order
+		await fetch('/api/admin/photos', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ order: photos.map(p => p.id) })
+		});
+	}
+
+	function handleDragEnd() {
+		dragIdx = null;
+		overIdx = null;
 	}
 </script>
 
@@ -56,7 +105,7 @@
 	<!-- Photo Manager -->
 	<div class="bg-surface border border-border rounded-[var(--radius-card)] p-5 mb-6">
 		<div class="flex items-center justify-between mb-4">
-			<h3 class="font-heading font-bold text-text">Photos ({data.vehicle.photos.length})</h3>
+			<h3 class="font-heading font-bold text-text">Photos ({photos.length})</h3>
 			<label class="cursor-pointer">
 				<span class="px-3 py-1.5 text-sm bg-primary text-white rounded-[var(--radius-button)] hover:bg-primary/90">
 					{uploading ? 'Uploading...' : '+ Upload Photos'}
@@ -65,14 +114,25 @@
 			</label>
 		</div>
 
-		{#if data.vehicle.photos.length > 0}
+		{#if photos.length > 0}
 			<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-				{#each data.vehicle.photos as photo}
-					<div class="relative group rounded-lg overflow-hidden border {photo.isPrimary ? 'border-primary border-2' : 'border-border'}">
-						<img src={photo.url} alt="" class="w-full aspect-[4/3] object-cover" />
+				{#each photos as photo, i (photo.id)}
+					<div
+						draggable="true"
+						ondragstart={() => handleDragStart(i)}
+						ondragover={(e) => handleDragOver(e, i)}
+						ondragleave={handleDragLeave}
+						ondrop={(e) => handleDrop(e, i)}
+						ondragend={handleDragEnd}
+						class="relative group rounded-lg overflow-hidden border cursor-grab active:cursor-grabbing transition-all {photo.isPrimary ? 'border-primary border-2' : 'border-border'} {overIdx === i && dragIdx !== i ? 'ring-2 ring-primary/50 scale-[1.02]' : ''} {dragIdx === i ? 'opacity-40' : ''}"
+					>
+						<img src={photo.url} alt="" class="w-full aspect-[4/3] object-cover pointer-events-none" />
 						{#if photo.isPrimary}
 							<span class="absolute top-1 left-1 px-1.5 py-0.5 text-[10px] bg-primary text-white rounded">Primary</span>
 						{/if}
+						<div class="absolute bottom-1 left-1 px-1.5 py-0.5 text-[10px] bg-black/50 text-white rounded">
+							{i + 1}
+						</div>
 						<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
 							{#if !photo.isPrimary}
 								<button onclick={() => setPrimaryPhoto(photo.id)} class="px-2 py-1 text-xs bg-white rounded text-text">Set Primary</button>
@@ -82,6 +142,7 @@
 					</div>
 				{/each}
 			</div>
+			<p class="text-xs text-text-light mt-2">Drag photos to reorder. First photo is shown in listings.</p>
 		{:else}
 			<p class="text-sm text-text-muted py-4 text-center">No photos yet. Upload some to get started.</p>
 		{/if}

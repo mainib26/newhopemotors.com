@@ -58,7 +58,38 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 	if (!id) throw error(400, 'Photo ID required');
 
 	const prisma = await db();
+	const photo = await prisma.vehiclePhoto.findUnique({ where: { id } });
+	if (!photo) throw error(404, 'Photo not found');
+
 	await prisma.vehiclePhoto.delete({ where: { id } });
+
+	// If deleted photo was primary, auto-set the first remaining photo as primary
+	if (photo.isPrimary) {
+		const first = await prisma.vehiclePhoto.findFirst({
+			where: { vehicleId: photo.vehicleId },
+			orderBy: { sortOrder: 'asc' }
+		});
+		if (first) {
+			await prisma.vehiclePhoto.update({ where: { id: first.id }, data: { isPrimary: true } });
+		}
+	}
+
+	return json({ success: true });
+};
+
+// Reorder photos
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user || !requireRole(locals.user.role, 'SALES')) {
+		throw error(403, 'Unauthorized');
+	}
+
+	const { order } = await request.json() as { order: string[] };
+	if (!Array.isArray(order)) throw error(400, 'Order array required');
+
+	const prisma = await db();
+	await Promise.all(
+		order.map((id, i) => prisma.vehiclePhoto.update({ where: { id }, data: { sortOrder: i } }))
+	);
 
 	return json({ success: true });
 };
