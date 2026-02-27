@@ -42,12 +42,22 @@
 	class="group bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
 >
 	<div class="relative aspect-[4/3] bg-cream overflow-hidden">
-		<img
-			src={vehicle.photos[0]?.url || 'https://placehold.co/800x600/e5e2da/6b7280?text=No+Photo'}
-			alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-			class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-			loading="lazy"
-		/>
+		{#if vehicle.photos[0]?.url}
+			<img
+				src={vehicle.photos[0].url}
+				alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+				class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+				loading="lazy"
+			/>
+		{:else}
+			<div class="w-full h-full flex flex-col items-center justify-center bg-background text-text-light">
+				<svg class="w-16 h-16 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M17 16V8a1 1 0 00-1-1h-2.5" />
+				</svg>
+				<span class="text-xs mt-2 opacity-50">Photo coming soon</span>
+			</div>
+		{/if}
 		<div class="absolute top-3 left-3">
 			<Badge variant="primary">{vehicle.bodyType}</Badge>
 		</div>

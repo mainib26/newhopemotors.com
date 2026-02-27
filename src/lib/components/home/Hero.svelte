@@ -14,9 +14,14 @@
 </script>
 
 <section class="relative bg-primary overflow-hidden">
-	<!-- Background pattern -->
-	<div class="absolute inset-0 opacity-10">
-		<div class="absolute inset-0" style="background-image: radial-gradient(circle at 25% 50%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 75% 50%, rgba(212,148,58,0.2) 0%, transparent 50%);"></div>
+	<!-- Background image -->
+	<div class="absolute inset-0">
+		<img
+			src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1920&q=80"
+			alt=""
+			class="w-full h-full object-cover opacity-25"
+		/>
+		<div class="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/40 to-primary/80"></div>
 	</div>
 
 	<div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
