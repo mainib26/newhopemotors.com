@@ -15,15 +15,7 @@
 </svelte:head>
 
 <div class="bg-background min-h-screen">
-	<!-- Page Header -->
-	<div class="bg-primary py-10">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<h1 class="text-3xl sm:text-4xl font-heading font-bold text-white">Our Inventory</h1>
-			<p class="mt-2 text-white/70">Quality pre-owned vehicles, inspected and fairly priced.</p>
-		</div>
-	</div>
-
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
 		<div class="lg:grid lg:grid-cols-[280px_1fr] lg:gap-8">
 			<!-- Desktop Sidebar -->
 			<aside class="hidden lg:block">
