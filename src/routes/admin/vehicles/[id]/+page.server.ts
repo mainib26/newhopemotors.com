@@ -11,7 +11,22 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	if (!vehicle) throw error(404, 'Vehicle not found');
 
-	return { vehicle: { ...vehicle, createdAt: vehicle.createdAt.toISOString(), updatedAt: vehicle.updatedAt.toISOString() } };
+	// Normalize features from Json field (may be string or array)
+	let features: string[] = [];
+	if (Array.isArray(vehicle.features)) {
+		features = vehicle.features;
+	} else if (typeof vehicle.features === 'string') {
+		try { features = JSON.parse(vehicle.features); } catch { features = []; }
+	}
+
+	return {
+		vehicle: {
+			...vehicle,
+			features,
+			createdAt: vehicle.createdAt.toISOString(),
+			updatedAt: vehicle.updatedAt.toISOString()
+		}
+	};
 };
 
 export const actions: Actions = {
