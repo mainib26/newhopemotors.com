@@ -21,7 +21,7 @@
 
 	<form method="POST" use:enhance={() => {
 		submitting = true;
-		return async ({ update }) => { submitting = false; await update(); };
+		return async ({ update }) => { submitting = false; await update({ reset: false }); };
 	}} class="space-y-6">
 		<div class="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
 			<Input label="Title" name="title" value={data.page.title} required />

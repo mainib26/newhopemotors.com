@@ -156,7 +156,7 @@
 			submitting = true;
 			return async ({ update }) => {
 				submitting = false;
-				await update();
+				await update({ reset: false });
 			};
 		}}
 	>
