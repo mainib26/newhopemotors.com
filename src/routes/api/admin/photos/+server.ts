@@ -25,7 +25,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const file = files[i];
 		// For now, store as base64 data URL. In production, upload to Supabase Storage.
 		const buffer = await file.arrayBuffer();
-		const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+		const bytes = new Uint8Array(buffer);
+		let binary = '';
+		for (let j = 0; j < bytes.length; j++) {
+			binary += String.fromCharCode(bytes[j]);
+		}
+		const base64 = btoa(binary);
 		const dataUrl = `data:${file.type};base64,${base64}`;
 
 		photos.push(
