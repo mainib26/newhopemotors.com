@@ -22,7 +22,7 @@ export const actions: Actions = {
 		const prisma = await db();
 		const user = await prisma.user.findUnique({ where: { email } });
 
-		if (!user || !user.active) {
+		if (!user || !user.isActive) {
 			return fail(400, { error: 'Invalid email or password.', email });
 		}
 
