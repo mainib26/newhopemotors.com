@@ -24,22 +24,21 @@
 				<h2 class="text-2xl sm:text-3xl font-heading font-bold text-text mb-4">
 					Meet Daniel
 				</h2>
-				<p class="text-text-muted leading-relaxed mb-4">
-					When I started New Hope Motors, I had one simple goal: treat every customer
-					the way I'd want to be treated. No pushy sales tactics. No hidden fees.
-					Just honest conversations about what you need and how we can help.
-				</p>
-				<p class="text-text-muted leading-relaxed mb-4">
-					As an independent dealer here in McKinney, I personally inspect every
-					vehicle on our lot. I know the history, the condition, and the fair price
-					for each one. My reputation is on the line with every sale — and that's
-					exactly how I like it.
-				</p>
-				<p class="text-text-muted leading-relaxed mb-6">
-					Whether you're a first-time buyer or upgrading for your growing family,
-					I'm here to help you find the right vehicle at the right price.
-					Give me a call — I'd love to chat.
-				</p>
+			<p class="text-text-muted leading-relaxed mb-4">
+				When I opened New Hope Motors, I wanted a place where you could talk about cars the same way you'd talk across
+				a kitchen table—plain and respectful. No high-pressure routines and no surprises on the paperwork. Just a real
+				conversation about what you need and whether we have something that fits.
+			</p>
+			<p class="text-text-muted leading-relaxed mb-4">
+				We pick up vehicles through trades and a few trusted sources, go through them carefully, and price them right at
+				market. If something doesn’t feel solid, it doesn’t make the cut. It’s not complicated: treat folks well, be
+				clear about what you’re selling, and trust they’ll come back because it felt right the first time.
+			</p>
+			<p class="text-text-muted leading-relaxed mb-6">
+				We’re here in McKinney, working with families from Frisco, Allen, Plano, Prosper—really anywhere in Collin
+				County. Whether you’re buying your first car or trading up for more space, you’ll get a calm, honest experience.
+				Come by, have a look, ask questions. If it isn’t the right fit, that’s fine too.
+			</p>
 				<div class="flex flex-wrap gap-4">
 					<Button href="/about">Our Story</Button>
 					<Button href="tel:9727678434" variant="secondary">

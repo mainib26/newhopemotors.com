@@ -24,25 +24,20 @@
 					<h2 class="text-2xl sm:text-3xl font-heading font-bold text-text mb-6">Meet Daniel</h2>
 					<div class="space-y-4 text-text-muted leading-relaxed">
 						<p>
-							When I started New Hope Motors, I had one simple goal: treat every customer
-							the way I'd want to be treated. No pushy sales tactics. No hidden fees.
-							Just honest conversations about what you need and how we can help.
+							When I opened New Hope Motors, I wanted a place where you could talk about cars the same way you'd talk
+							across a kitchen table—plain and respectful. No high-pressure routines, no surprises on the paperwork. Just
+							a real conversation about what you need and whether we have something that fits.
 						</p>
 						<p>
-							After years of watching friends and family get burned by dealerships that
-							cared more about the sale than the customer, I decided to build something
-							different. A place where you can trust the person selling you the car
-							because they'd put their own family in it.
+							We pick up vehicles through trades and a few trusted sources, go through them carefully, and price them
+							right at market. If something doesn’t feel solid, it doesn’t make the cut. It’s not complicated: treat folks
+							well, be clear about what you’re selling, and trust that they’ll come back because it felt right the first
+							time.
 						</p>
 						<p>
-							I personally inspect every vehicle on our lot. I know the history, the
-							condition, and the fair price for each one. My reputation is on the line
-							with every sale — and that's exactly how I like it.
-						</p>
-						<p>
-							We're located right here in McKinney, serving families across Collin County —
-							from Frisco and Allen to Plano and Prosper. Whether you're a first-time buyer
-							or upgrading for a growing family, I'd love to help you find the right vehicle.
+							We’re here in McKinney, working with families from Frisco, Allen, Plano, Prosper—really anywhere in Collin
+							County. Whether you’re buying your first car or trading up for more space, you’ll get a calm, honest
+							experience. Come by, have a look, ask questions. If it isn’t the right fit, that’s fine too.
 						</p>
 					</div>
 				</div>
