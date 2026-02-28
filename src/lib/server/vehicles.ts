@@ -1,4 +1,6 @@
-import { fetchTable } from '$lib/server/supabase-rest';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+
+const adminClient = () => getSupabaseAdminClient();
 
 export type VehicleRecord = {
 	id: string;
@@ -25,10 +27,48 @@ export type VehicleRecord = {
 	carfaxUrl?: string | null;
 	autoCheckUrl?: string | null;
 	listedAt: string;
-	photos?: { id: string; url: string; alt: string; isPrimary?: boolean }[];
+	photos: { id: string; url: string; alt: string | null; isPrimary?: boolean }[];
 };
 
-const mapVehicle = (record: VehicleRecord) => ({
+type VehicleRow = {
+	id: string;
+	slug: string;
+	vin: string;
+	stockNumber: string;
+	year: number;
+	make: string;
+	model: string;
+	trim?: string | null;
+	bodyType: string;
+	exteriorColor?: string | null;
+	interiorColor?: string | null;
+	mileage: number;
+	engine?: string | null;
+	transmission?: string | null;
+	drivetrain?: string | null;
+	price: number;
+	internetPrice?: number | null;
+	condition: string;
+	status: string;
+	description?: string | null;
+	features?: string | string[];
+	carfaxUrl?: string | null;
+	autoCheckUrl?: string | null;
+	createdAt: string;
+	updatedAt: string;
+	listedAt?: string | null;
+};
+
+type PhotoRow = {
+	id: string;
+	vehicleId: string;
+	url: string;
+	alt: string | null;
+	isPrimary?: boolean | null;
+	sortOrder?: number | null;
+};
+
+const mapVehicle = (record: VehicleRow, photos: PhotoRow[]): VehicleRecord => ({
 	id: record.id,
 	slug: record.slug,
 	vin: record.vin,
@@ -56,41 +96,75 @@ const mapVehicle = (record: VehicleRecord) => ({
 		: [],
 	carfaxUrl: record.carfaxUrl ?? null,
 	autoCheckUrl: record.autoCheckUrl ?? null,
-	listedAt: record.listedAt,
-	photos: (record.photos ?? []).map((p) => ({
-		id: p.id,
-		url: p.url,
-		alt: p.alt,
-		isPrimary: p.isPrimary ?? false
-	}))
+	listedAt: record.listedAt ?? record.createdAt,
+	photos: photos
+		.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+		.map((p) => ({
+			id: p.id,
+			url: p.url,
+			alt: p.alt,
+			isPrimary: Boolean(p.isPrimary)
+		}))
 });
 
+async function fetchPhotos(vehicleIds: string[]) {
+	const client = adminClient();
+	if (!vehicleIds.length) return new Map<string, PhotoRow[]>();
+
+	const { data, error } = await client
+		.from('VehiclePhoto')
+		.select('id,vehicleId,url,alt,isPrimary,sortOrder')
+		.in('vehicleId', vehicleIds);
+
+	if (error || !data) {
+		console.warn('Failed to fetch vehicle photos', error?.message);
+		return new Map();
+	}
+
+	const grouped = new Map<string, PhotoRow[]>();
+	for (const photo of data as PhotoRow[]) {
+		if (!grouped.has(photo.vehicleId)) grouped.set(photo.vehicleId, []);
+		grouped.get(photo.vehicleId)!.push(photo);
+	}
+	return grouped;
+}
+
 export async function fetchActiveVehicles() {
-	try {
-		const rows = await fetchTable<VehicleRecord>('vehicles', {
-			select:
-				'id,slug,vin,stockNumber,year,make,model,trim,bodyType,exteriorColor,interiorColor,mileage,engine,transmission,drivetrain,price,internetPrice,condition,status,description,features,carfaxUrl,autoCheckUrl,listedAt,photos',
-			status: 'eq.ACTIVE',
-			order: 'listed_at.desc'
-		});
-		return rows.map(mapVehicle);
-	} catch (err) {
-		console.warn('Failed to fetch vehicles from Supabase', err);
+	const client = adminClient();
+	const { data, error } = await client
+		.from('Vehicles')
+		.select(
+			'id,slug,vin,stockNumber,year,make,model,trim,bodyType,exteriorColor,interiorColor,mileage,engine,transmission,drivetrain,price,internetPrice,condition,status,description,features,carfaxUrl,autoCheckUrl,createdAt,updatedAt'
+		)
+		.eq('status', 'ACTIVE')
+		.order('createdAt', { ascending: false });
+
+	if (error || !data) {
+		console.error('Failed to fetch vehicles from Supabase', JSON.stringify(error));
 		return [];
 	}
+
+	const photos = await fetchPhotos((data as VehicleRow[]).map((row) => row.id));
+	return (data as VehicleRow[]).map((row) => mapVehicle(row, photos.get(row.id) ?? []));
 }
 
 export async function fetchVehicleBySlug(slug: string) {
-	try {
-		const rows = await fetchTable<VehicleRecord>('vehicles', {
-			select:
-				'id,slug,vin,stockNumber,year,make,model,trim,bodyType,exteriorColor,interiorColor,mileage,engine,transmission,drivetrain,price,internetPrice,condition,status,description,features,carfaxUrl,autoCheckUrl,listedAt,photos',
-			slug: `eq.${slug}`,
-			limit: '1'
-		});
-		return rows.length ? mapVehicle(rows[0]) : null;
-	} catch (err) {
-		console.warn('Failed to fetch vehicle detail', err);
+	const client = adminClient();
+	const { data, error } = await client
+		.from('Vehicles')
+		.select(
+			'id,slug,vin,stockNumber,year,make,model,trim,bodyType,exteriorColor,interiorColor,mileage,engine,transmission,drivetrain,price,internetPrice,condition,status,description,features,carfaxUrl,autoCheckUrl,createdAt,updatedAt'
+		)
+		.eq('slug', slug)
+		.maybeSingle();
+
+	if (error) {
+		console.warn('Failed to fetch vehicle detail', error.message);
 		return null;
 	}
+
+	if (!data) return null;
+
+	const photos = await fetchPhotos([data.id]);
+	return mapVehicle(data as VehicleRow, photos.get(data.id) ?? []);
 }
