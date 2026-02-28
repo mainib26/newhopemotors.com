@@ -13,7 +13,7 @@ export const load: PageServerLoad = async () => {
 	const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
 	const [activeVehicles, newLeadsToday, totalLeads, appointmentsToday, soldThisMonth, recentLeadsRes] = await Promise.all([
-		supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
+		supabase.from('Vehicles').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
 		supabase
 			.from('leads')
 			.select('id', { count: 'exact', head: true })
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async () => {
 			.gte('date', startOfDay)
 			.lt('date', nextDay),
 		supabase
-			.from('vehicles')
+			.from('Vehicles')
 			.select('id', { count: 'exact', head: true })
 			.eq('status', 'SOLD')
 			.gte('updated_at', startOfMonth),

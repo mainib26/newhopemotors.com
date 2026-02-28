@@ -30,9 +30,8 @@ const VEHICLE_SELECT = [
   'slug',
   'createdAt',
   'updatedAt',
-  'listedAt',
   'soldAt',
-  `photos:vehicle_photos(${PHOTO_FIELDS})`
+  `photos:VehiclePhoto(${PHOTO_FIELDS})`
 ].join(',');
 
 export type VehicleSummary = {
@@ -79,7 +78,6 @@ export type AdminVehicle = {
   slug: string;
   createdAt: string;
   updatedAt: string;
-  listedAt: string | null;
   soldAt: string | null;
   photos: AdminVehiclePhoto[];
 };
@@ -184,7 +182,6 @@ function normalizeVehicle(record: any): AdminVehicle {
     slug: record.slug,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
-    listedAt: record.listedAt ?? null,
     soldAt: record.soldAt ?? null,
     photos
   };
@@ -208,7 +205,7 @@ export async function listAdminVehicles(filters: VehicleFilters): Promise<{ vehi
   const to = from + perPage - 1;
 
   let query = client
-    .from('vehicles')
+    .from('Vehicles')
     .select(VEHICLE_SELECT, { count: 'exact' })
     .order('createdAt', { ascending: false })
     .range(from, to);
@@ -245,7 +242,7 @@ export async function listAdminVehicles(filters: VehicleFilters): Promise<{ vehi
 export async function getAdminVehicle(id: string): Promise<AdminVehicle> {
 	const client = supabase();
   const { data, error } = await client
-    .from('vehicles')
+    .from('Vehicles')
     .select(VEHICLE_SELECT)
     .eq('id', id)
     .single();
@@ -264,7 +261,7 @@ export async function createAdminVehicle(payload: VehiclePayload): Promise<Admin
     features: JSON.stringify(payload.features ?? [])
   };
 
-  const { data, error } = await client.from('vehicles').insert(insertPayload).select(VEHICLE_SELECT).single();
+  const { data, error } = await client.from('Vehicles').insert(insertPayload).select(VEHICLE_SELECT).single();
   if (error) {
     throw new Error(`Failed to create vehicle: ${error.message}`);
   }
@@ -279,7 +276,7 @@ export async function updateAdminVehicle(id: string, payload: VehiclePayload): P
   };
 
   const { data, error } = await client
-    .from('vehicles')
+    .from('Vehicles')
     .update(updatePayload)
     .eq('id', id)
     .select(VEHICLE_SELECT)
@@ -295,7 +292,7 @@ export async function updateAdminVehicle(id: string, payload: VehiclePayload): P
 export async function deleteAdminVehicle(id: string): Promise<void> {
 	const client = supabase();
   const { data: photos } = await client
-    .from('vehicle_photos')
+    .from('VehiclePhoto')
     .select('id,supabasePath')
     .eq('vehicleId', id);
 
@@ -304,10 +301,10 @@ export async function deleteAdminVehicle(id: string): Promise<void> {
     if (paths.length) {
       await client.storage.from(VEHICLE_BUCKET).remove(paths);
     }
-    await client.from('vehicle_photos').delete().eq('vehicleId', id);
+    await client.from('VehiclePhoto').delete().eq('vehicleId', id);
   }
 
-  const { error } = await client.from('vehicles').delete().eq('id', id);
+  const { error } = await client.from('Vehicles').delete().eq('id', id);
   if (error) {
     throw new Error(`Failed to delete vehicle: ${error.message}`);
   }
@@ -330,7 +327,7 @@ export async function uploadVehiclePhotos(vehicleId: string, files: File[]): Pro
   }
 
   const { count } = await client
-    .from('vehicle_photos')
+    .from('VehiclePhoto')
     .select('id', { count: 'exact', head: true })
     .eq('vehicleId', vehicleId);
 
@@ -354,7 +351,7 @@ export async function uploadVehiclePhotos(vehicleId: string, files: File[]): Pro
 
     const publicUrl = storage.getPublicUrl(path).data.publicUrl;
     const { data, error } = await client
-      .from('vehicle_photos')
+      .from('VehiclePhoto')
       .insert({
         vehicleId,
         url: publicUrl,
@@ -388,7 +385,7 @@ export async function deleteVehiclePhoto(photoId: string): Promise<void> {
 	const client = supabase();
   const storage = client.storage.from(VEHICLE_BUCKET);
   const { data, error } = await client
-    .from('vehicle_photos')
+    .from('VehiclePhoto')
     .select('id,vehicleId,supabasePath,isPrimary')
     .eq('id', photoId)
     .single();
@@ -401,11 +398,11 @@ export async function deleteVehiclePhoto(photoId: string): Promise<void> {
     await storage.remove([data.supabasePath]);
   }
 
-  await client.from('vehicle_photos').delete().eq('id', photoId);
+  await client.from('VehiclePhoto').delete().eq('id', photoId);
 
   if (data.isPrimary) {
     const { data: first } = await client
-      .from('vehicle_photos')
+      .from('VehiclePhoto')
       .select('id')
       .eq('vehicleId', data.vehicleId)
       .order('sortOrder', { ascending: true })
@@ -413,7 +410,7 @@ export async function deleteVehiclePhoto(photoId: string): Promise<void> {
       .single();
 
     if (first) {
-      await client.from('vehicle_photos').update({ isPrimary: true }).eq('id', first.id);
+      await client.from('VehiclePhoto').update({ isPrimary: true }).eq('id', first.id);
     }
   }
 }
@@ -421,14 +418,14 @@ export async function deleteVehiclePhoto(photoId: string): Promise<void> {
 export async function reorderVehiclePhotos(order: string[]): Promise<void> {
 	const client = supabase();
   await Promise.all(
-    order.map((photoId, index) => client.from('vehicle_photos').update({ sortOrder: index }).eq('id', photoId))
+    order.map((photoId, index) => client.from('VehiclePhoto').update({ sortOrder: index }).eq('id', photoId))
   );
 }
 
 export async function markPrimaryPhoto(photoId: string, vehicleId: string): Promise<void> {
 	const client = supabase();
-  await client.from('vehicle_photos').update({ isPrimary: false }).eq('vehicleId', vehicleId);
-  await client.from('vehicle_photos').update({ isPrimary: true }).eq('id', photoId);
+  await client.from('VehiclePhoto').update({ isPrimary: false }).eq('vehicleId', vehicleId);
+  await client.from('VehiclePhoto').update({ isPrimary: true }).eq('id', photoId);
 }
 
 export async function fetchVehicleSummaries(ids: string[]): Promise<Map<string, VehicleSummary>> {
@@ -438,7 +435,7 @@ export async function fetchVehicleSummaries(ids: string[]): Promise<Map<string, 
 	}
 
 	const { data, error } = await client
-		.from('vehicles')
+		.from('Vehicles')
 		.select('id,year,make,model,trim')
 		.in('id', ids);
 

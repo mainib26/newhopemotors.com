@@ -37,7 +37,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			.order('created_at', { ascending: false })
 			.limit(50),
 		supabase
-			.from('vehicles')
+			.from('Vehicles')
 			.select('id,year,make,model')
 			.eq('status', 'ACTIVE')
 			.order('created_at', { ascending: false })

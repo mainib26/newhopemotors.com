@@ -47,7 +47,7 @@ export async function pushUnsentLeads(): Promise<PushResult> {
 	const vehicleMap = new Map<string, VehicleSummary>();
 	if (vehicleIds.length) {
 		const { data: vehicles, error: vehicleError } = await supabase
-			.from('vehicles')
+			.from('Vehicles')
 			.select('id,year,make,model,vin,stock_number')
 			.in('id', vehicleIds);
 		if (!vehicleError && vehicles) {
