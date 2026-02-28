@@ -1,3 +1,6 @@
+import { db } from './db';
+import type { ChatRole } from '@prisma/client';
+
 export const SYSTEM_PROMPT = `You are Hope, a friendly and helpful virtual assistant for New Hope Motors, a trusted used car dealership in McKinney, Texas.
 
 DEALERSHIP INFO:
@@ -33,7 +36,31 @@ GUIDELINES:
 - For pricing, always note "plus tax, title, and license"
 - After helping, ask if there's anything else you can help with`;
 
-export async function saveConversation() {
-	// In the static version of the site we do not persist chat transcripts.
-	return null;
+const normalizeRole = (role: string): ChatRole => role.toLowerCase() === 'assistant' ? 'ASSISTANT' : 'USER';
+
+export async function saveConversation(sessionId: string, messages: Array<{ role: string; content: string }>) {
+	const prisma = await db();
+
+	let conversation = await prisma.chatConversation.findFirst({
+		where: { sessionId }
+	});
+
+	if (!conversation) {
+		conversation = await prisma.chatConversation.create({
+			data: { sessionId }
+		});
+	}
+
+	const latest = messages[messages.length - 1];
+	if (latest) {
+		await prisma.chatMessage.create({
+			data: {
+				conversationId: conversation.id,
+				role: normalizeRole(latest.role),
+				content: latest.content
+			}
+		});
+	}
+
+	return conversation.id;
 }
