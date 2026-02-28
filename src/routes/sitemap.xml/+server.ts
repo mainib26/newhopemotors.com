@@ -1,14 +1,7 @@
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
+import { fetchActiveVehicles } from '$lib/server/vehicles';
 
 export const GET: RequestHandler = async () => {
-	const prisma = await db();
-
-	const vehicles = await prisma.vehicle.findMany({
-		where: { status: 'ACTIVE' },
-		select: { slug: true, updatedAt: true }
-	});
-
 	const staticPages = [
 		{ url: '', priority: '1.0', changefreq: 'daily' },
 		{ url: '/inventory', priority: '0.9', changefreq: 'daily' },
@@ -17,21 +10,30 @@ export const GET: RequestHandler = async () => {
 		{ url: '/contact', priority: '0.6', changefreq: 'monthly' }
 	];
 
+	const vehicles = await fetchActiveVehicles();
 	const baseUrl = 'https://newhopemotors.com';
 
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticPages.map((p) => `  <url>
+${staticPages
+	.map(
+		(p) => `  <url>
     <loc>${baseUrl}${p.url}</loc>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
-  </url>`).join('\n')}
-${vehicles.map((v) => `  <url>
+  </url>`
+	)
+	.join('\n')}
+${vehicles
+	.map(
+		(v) => `  <url>
     <loc>${baseUrl}/vehicle/${v.slug}</loc>
-    <lastmod>${v.updatedAt.toISOString().split('T')[0]}</lastmod>
+    <lastmod>${v.listedAt}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`).join('\n')}
+  </url>`
+	)
+	.join('\n')}
 </urlset>`;
 
 	return new Response(xml, {

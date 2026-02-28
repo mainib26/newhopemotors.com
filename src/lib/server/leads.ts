@@ -1,4 +1,4 @@
-import { db } from './db';
+import { insertRow } from '$lib/server/supabase-rest';
 
 interface CreateLeadInput {
 	firstName: string;
@@ -11,25 +11,25 @@ interface CreateLeadInput {
 }
 
 export async function createLead(input: CreateLeadInput) {
-	const prisma = await db();
+	const payload = {
+		first_name: input.firstName,
+		last_name: input.lastName || null,
+		email: input.email || null,
+		phone: input.phone || null,
+		message: input.message || null,
+		source: input.source || 'WEBSITE',
+		vehicle_id: input.vehicleId || null,
+		status: 'NEW'
+	};
 
-	const lead = await prisma.lead.create({
-		data: {
-			firstName: input.firstName,
-			lastName: input.lastName || null,
-			email: input.email || null,
-			phone: input.phone || null,
-			message: input.message || null,
-			source: (input.source as any) || 'WEBSITE',
-			vehicleId: input.vehicleId || null,
-			status: 'NEW'
-		}
-	});
-
-	return lead;
+	return insertRow('leads', payload);
 }
 
-export function validateLeadInput(data: FormData): { valid: boolean; errors: Record<string, string>; values: CreateLeadInput } {
+export function validateLeadInput(data: FormData): {
+	valid: boolean;
+	errors: Record<string, string>;
+	values: CreateLeadInput;
+} {
 	const firstName = (data.get('firstName') as string)?.trim() || '';
 	const lastName = (data.get('lastName') as string)?.trim() || '';
 	const email = (data.get('email') as string)?.trim() || '';

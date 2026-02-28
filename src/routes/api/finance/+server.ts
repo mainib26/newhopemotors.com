@@ -1,12 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
 import { createLead } from '$lib/server/leads';
+import { insertRow } from '$lib/server/supabase-rest';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const formData = await request.formData();
-		const prisma = await db();
 
 		const firstName = (formData.get('firstName') as string)?.trim();
 		const lastName = (formData.get('lastName') as string)?.trim();
@@ -22,7 +21,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ success: false, errors }, { status: 400 });
 		}
 
-		// Create a lead first
 		const lead = await createLead({
 			firstName,
 			lastName,
@@ -32,20 +30,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			message: 'Finance pre-qualification application'
 		});
 
-		// Create finance application
-		await prisma.financeApplication.create({
-			data: {
-				leadId: lead.id,
-				firstName,
-				lastName,
-				email: email || '',
-				phone,
-				employmentStatus: (formData.get('employmentStatus') as string) || null,
-				monthlyIncome: Number(formData.get('monthlyIncome')) || null,
-				housingStatus: (formData.get('housingStatus') as string) || null,
-				monthlyHousingPayment: Number(formData.get('monthlyHousingPayment')) || null,
-				status: 'SUBMITTED'
-			}
+		await insertRow('finance_applications', {
+			lead_id: lead?.id ?? null,
+			first_name: firstName,
+			last_name: lastName,
+			email: email || '',
+			phone,
+			employment_status: (formData.get('employmentStatus') as string) || null,
+			monthly_income: Number(formData.get('monthlyIncome')) || null,
+			housing_status: (formData.get('housingStatus') as string) || null,
+			monthly_housing_payment: Number(formData.get('monthlyHousingPayment')) || null,
+			status: 'SUBMITTED'
 		});
 
 		return json({ success: true });

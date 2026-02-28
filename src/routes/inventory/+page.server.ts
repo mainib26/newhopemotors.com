@@ -1,98 +1,67 @@
 import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
+import { fetchActiveVehicles } from '$lib/server/vehicles';
 
 const PER_PAGE = 12;
 
-export const load: PageServerLoad = async ({ url }) => {
-	const prisma = await db();
+const sorters: Record<string, (a: any, b: any) => number> = {
+	newest: (a, b) => new Date(b.listedAt).getTime() - new Date(a.listedAt).getTime(),
+	'price-low': (a, b) => a.price - b.price,
+	'price-high': (a, b) => b.price - a.price,
+	'mileage-low': (a, b) => a.mileage - b.mileage,
+	'mileage-high': (a, b) => b.mileage - a.mileage
+};
 
-	// Parse filter params
-	const q = url.searchParams.get('q') || '';
-	const make = url.searchParams.get('make') || '';
-	const bodyType = url.searchParams.get('bodyType') || '';
+export const load: PageServerLoad = async ({ url }) => {
+	const vehicles = await fetchActiveVehicles();
+
+	const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
+	const make = url.searchParams.get('make')?.trim().toLowerCase() ?? '';
+	const bodyType = url.searchParams.get('bodyType')?.trim() ?? '';
 	const minPrice = Number(url.searchParams.get('minPrice')) || 0;
 	const maxPrice = Number(url.searchParams.get('maxPrice')) || 0;
 	const minYear = Number(url.searchParams.get('minYear')) || 0;
 	const maxYear = Number(url.searchParams.get('maxYear')) || 0;
 	const maxMileage = Number(url.searchParams.get('maxMileage')) || 0;
-	const sort = url.searchParams.get('sort') || 'newest';
+	const sortKey = url.searchParams.get('sort') || 'newest';
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 
-	// Build where clause
-	const where: any = { status: 'ACTIVE' };
+	let filtered = vehicles;
 
 	if (q) {
-		where.OR = [
-			{ make: { contains: q, mode: 'insensitive' } },
-			{ model: { contains: q, mode: 'insensitive' } },
-			{ trim: { contains: q, mode: 'insensitive' } },
-			{ description: { contains: q, mode: 'insensitive' } }
-		];
+		filtered = filtered.filter((v) =>
+			`${v.make} ${v.model} ${v.trim ?? ''} ${v.description ?? ''}`.toLowerCase().includes(q)
+		);
 	}
-	if (make) where.make = { equals: make, mode: 'insensitive' };
-	if (bodyType) where.bodyType = bodyType;
-	if (minPrice) where.price = { ...where.price, gte: minPrice };
-	if (maxPrice) where.price = { ...where.price, lte: maxPrice };
-	if (minYear) where.year = { ...where.year, gte: minYear };
-	if (maxYear) where.year = { ...where.year, lte: maxYear };
-	if (maxMileage) where.mileage = { lte: maxMileage };
+	if (make) {
+		filtered = filtered.filter((v) => v.make.toLowerCase() === make);
+	}
+	if (bodyType) {
+		filtered = filtered.filter((v) => v.bodyType === bodyType);
+	}
+	if (minPrice) filtered = filtered.filter((v) => v.price >= minPrice);
+	if (maxPrice) filtered = filtered.filter((v) => v.price <= maxPrice);
+	if (minYear) filtered = filtered.filter((v) => v.year >= minYear);
+	if (maxYear) filtered = filtered.filter((v) => v.year <= maxYear);
+	if (maxMileage) filtered = filtered.filter((v) => v.mileage <= maxMileage);
 
-	// Build orderBy
-	const orderByMap: Record<string, any> = {
-		newest: { createdAt: 'desc' },
-		'price-low': { price: 'asc' },
-		'price-high': { price: 'desc' },
-		'mileage-low': { mileage: 'asc' },
-		'mileage-high': { mileage: 'desc' }
-	};
-	const orderBy = orderByMap[sort] || orderByMap.newest;
+	const sorter = sorters[sortKey] ?? sorters.newest;
+	filtered = filtered.sort(sorter);
 
-	// Fetch vehicles + count
-	const [vehicles, total] = await Promise.all([
-		prisma.vehicle.findMany({
-			where,
-			include: {
-				photos: {
-					where: { isPrimary: true },
-					take: 1
-				}
-			},
-			orderBy,
-			skip: (page - 1) * PER_PAGE,
-			take: PER_PAGE
-		}),
-		prisma.vehicle.count({ where })
-	]);
+	const total = filtered.length;
+	const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+	const currentPage = Math.min(page, totalPages);
+	const pageVehicles = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-	// Get distinct makes and body types for filter dropdowns
-	const allVehicles = await prisma.vehicle.findMany({
-		where: { status: 'ACTIVE' },
-		select: { make: true, bodyType: true },
-		distinct: ['make']
-	});
-	const makes = [...new Set(allVehicles.map((v: any) => v.make))].sort();
-	const bodyTypes = [...new Set(allVehicles.map((v: any) => v.bodyType))].sort();
+	const makes = Array.from(new Set(vehicles.map((v) => v.make))).sort();
+	const bodyTypes = Array.from(new Set(vehicles.map((v) => v.bodyType))).sort();
 
 	return {
-		vehicles: vehicles.map((v: any) => ({
-			id: v.id,
-			year: v.year,
-			make: v.make,
-			model: v.model,
-			trim: v.trim,
-			price: v.price,
-			internetPrice: v.internetPrice,
-			mileage: v.mileage,
-			bodyType: v.bodyType,
-			slug: v.slug,
-			exteriorColor: v.exteriorColor,
-			photos: v.photos.map((p: any) => ({ url: p.url, alt: p.alt }))
-		})),
+		vehicles: pageVehicles,
 		total,
-		page,
-		totalPages: Math.ceil(total / PER_PAGE),
+		page: currentPage,
+		totalPages,
 		makes,
 		bodyTypes,
-		filters: { q, make, bodyType, minPrice, maxPrice, minYear, maxYear, maxMileage, sort }
+		filters: { q, make, bodyType, minPrice, maxPrice, minYear, maxYear, maxMileage, sort: sortKey }
 	};
 };
