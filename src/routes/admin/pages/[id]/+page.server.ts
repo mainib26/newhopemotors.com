@@ -1,17 +1,32 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { db } from '$lib/server/db';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+
+const adminClient = () => getSupabaseAdminClient();
 
 export const load: PageServerLoad = async ({ params }) => {
-	const prisma = await db();
-	const page = await prisma.page.findUnique({ where: { id: params.id } });
-	if (!page) throw error(404, 'Page not found');
+	const { data, error: loadError } = await adminClient()
+		.from('pages')
+		.select('id,slug,title,content,meta_title,meta_description,published_at,created_at,updated_at')
+		.eq('id', params.id)
+		.maybeSingle();
+
+	if (loadError) {
+		console.error('Failed to load page', loadError.message);
+	}
+	if (!data) throw error(404, 'Page not found');
 
 	return {
 		page: {
-			...page,
-			createdAt: page.createdAt.toISOString(),
-			updatedAt: page.updatedAt.toISOString()
+			id: data.id,
+			slug: data.slug,
+			title: data.title,
+			content: data.content,
+			metaTitle: data.meta_title,
+			metaDescription: data.meta_description,
+			published: Boolean(data.published_at),
+			createdAt: data.created_at,
+			updatedAt: data.updated_at
 		}
 	};
 };
@@ -27,17 +42,33 @@ export const actions: Actions = {
 
 		if (!title) return fail(400, { error: 'Title is required' });
 
-		const prisma = await db();
-		const existing = await prisma.page.findUnique({ where: { id: params.id }, select: { publishedAt: true } });
-		if (!existing) {
+		const supabase = adminClient();
+		const { data: existing, error: fetchError } = await supabase
+			.from('pages')
+			.select('published_at')
+			.eq('id', params.id)
+			.maybeSingle();
+
+		if (fetchError || !existing) {
 			return fail(404, { error: 'Page not found' });
 		}
 
-		const publishedAt = published ? existing.publishedAt ?? new Date() : null;
-		await prisma.page.update({
-			where: { id: params.id },
-			data: { title, content, metaTitle, metaDescription, publishedAt }
-		});
+		const publishedAt = published ? existing.published_at ?? new Date().toISOString() : null;
+
+		const { error: updateError } = await supabase
+			.from('pages')
+			.update({
+				title,
+				content,
+				meta_title: metaTitle,
+				meta_description: metaDescription,
+				published_at: publishedAt
+			})
+			.eq('id', params.id);
+
+		if (updateError) {
+			return fail(400, { error: updateError.message });
+		}
 
 		return { success: true };
 	}

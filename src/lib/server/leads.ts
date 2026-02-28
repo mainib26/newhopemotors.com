@@ -1,4 +1,5 @@
-import { db } from './db';
+import { insertRow } from '$lib/server/supabase-rest';
+import type { LeadSource } from '$lib/constants/enums';
 
 interface CreateLeadInput {
 	firstName: string;
@@ -11,22 +12,27 @@ interface CreateLeadInput {
 }
 
 export async function createLead(input: CreateLeadInput) {
-	const prisma = await db();
+	const payload = {
+		first_name: input.firstName,
+		last_name: input.lastName || null,
+		email: input.email || null,
+		phone: input.phone || null,
+		message: input.message || null,
+		source: (input.source as LeadSource) || 'WEBSITE',
+		vehicle_id: input.vehicleId || null,
+		status: 'NEW'
+	};
 
-	const lead = await prisma.lead.create({
-		data: {
-			firstName: input.firstName,
-			lastName: input.lastName || null,
-			email: input.email || null,
-			phone: input.phone || null,
-			message: input.message || null,
-			source: (input.source as any) || 'WEBSITE',
-			vehicleId: input.vehicleId || null,
-			status: 'NEW'
-		}
-	});
-
-	return lead;
+	const row = await insertRow('leads', payload);
+	return {
+		id: row.id as string,
+		firstName: (row.first_name as string) ?? input.firstName,
+		lastName: (row.last_name as string | null) ?? null,
+		email: (row.email as string | null) ?? null,
+		phone: (row.phone as string | null) ?? null,
+		source: (row.source as string) ?? payload.source,
+		status: (row.status as string) ?? 'NEW'
+	};
 }
 
 export function validateLeadInput(data: FormData): { valid: boolean; errors: Record<string, string>; values: CreateLeadInput } {

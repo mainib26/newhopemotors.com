@@ -1,23 +1,32 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { db } from '$lib/server/db';
-import { requireRole } from '$lib/server/auth';
 import { getSupabaseAdminClient, updateSupabaseUserActiveState } from '$lib/server/supabase';
-import type { UserRole } from '@prisma/client';
+import { requireRole } from '$lib/server/auth';
+import { USER_ROLES, type UserRole } from '$lib/constants/enums';
 
-const USER_ROLES: UserRole[] = ['ADMIN', 'SALES', 'VIEWER'];
+const adminClient = () => getSupabaseAdminClient();
 const isUserRole = (value: string): value is UserRole => USER_ROLES.includes(value as UserRole);
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const prisma = await db();
+	const { data, error } = await adminClient()
+		.from('users')
+		.select('id,name,email,role,is_active,created_at')
+		.order('created_at', { ascending: true });
 
-	const users = await prisma.user.findMany({
-		select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
-		orderBy: { createdAt: 'asc' }
-	});
+	if (error) {
+		console.error('Failed to load users', error.message);
+		return { users: [], isAdmin: locals.user?.role === 'ADMIN' };
+	}
 
 	return {
-		users: users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() })),
+		users: (data ?? []).map((u) => ({
+			id: u.id,
+			name: u.name,
+			email: u.email,
+			role: u.role as UserRole,
+			isActive: u.is_active ?? true,
+			createdAt: (u.created_at ?? new Date().toISOString())
+		})),
 		isAdmin: locals.user?.role === 'ADMIN'
 	};
 };
@@ -38,12 +47,17 @@ export const actions: Actions = {
 			return fail(400, { userError: 'All fields are required' });
 		}
 
-		const prisma = await db();
+		const existing = await adminClient()
+			.from('users')
+			.select('id')
+			.eq('email', email)
+			.maybeSingle();
 
-		const existing = await prisma.user.findUnique({ where: { email } });
-		if (existing) return fail(400, { userError: 'Email already in use' });
+		if (existing.data) {
+			return fail(400, { userError: 'Email already in use' });
+		}
 
-		const supabaseAdmin = getSupabaseAdminClient();
+		const supabaseAdmin = adminClient();
 		const { data: supabaseData, error: supabaseError } = await supabaseAdmin.auth.admin.createUser({
 			email,
 			password,
@@ -54,9 +68,19 @@ export const actions: Actions = {
 			return fail(400, { userError: supabaseError.message });
 		}
 
-		await prisma.user.create({
-			data: { name, email, passwordHash: 'supabase-managed', role: roleValue, supabaseId: supabaseData?.user?.id ?? null }
-		});
+		const { error: insertError } = await adminClient()
+			.from('users')
+			.insert({
+				name,
+				email,
+				role: roleValue,
+				is_active: true,
+				supabase_id: supabaseData?.user?.id ?? null
+			});
+
+		if (insertError) {
+			return fail(400, { userError: insertError.message });
+		}
 
 		return { userCreated: true };
 	},
@@ -71,9 +95,18 @@ export const actions: Actions = {
 		const isActive = formData.get('isActive') === 'true';
 		if (!userId) return fail(400);
 
-		const prisma = await db();
-		const user = await prisma.user.update({ where: { id: userId }, data: { isActive }, select: { email: true, supabaseId: true } });
-		await updateSupabaseUserActiveState(user.email, user.supabaseId, isActive);
+		const { data, error } = await adminClient()
+			.from('users')
+			.update({ is_active: isActive })
+			.eq('id', userId)
+			.select('email,supabase_id')
+			.single();
+
+		if (error || !data) {
+			return fail(400, { userError: error?.message ?? 'Failed to update user' });
+		}
+
+		await updateSupabaseUserActiveState(data.email, data.supabase_id ?? null, isActive);
 		return { userToggled: true };
 	}
 };

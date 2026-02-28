@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
 import { generateAdfXml } from './adf';
 
 interface PushResult {
@@ -8,52 +8,86 @@ interface PushResult {
 	errors: string[];
 }
 
-export async function pushUnsentLeads(): Promise<PushResult> {
-	const prisma = await db();
+const adminClient = () => getSupabaseAdminClient();
 
-	const leads = await prisma.lead.findMany({
-		where: { adfPushed: false },
-		include: {
-			vehicle: {
-				select: { year: true, make: true, model: true, vin: true, stockNumber: true }
-			}
-		},
-		take: 50
-	});
+type LeadRecord = {
+	id: string;
+	first_name: string;
+	last_name: string | null;
+	email: string | null;
+	phone: string | null;
+	message: string | null;
+	source: string;
+	vehicle_id: string | null;
+};
+
+type VehicleSummary = {
+	id: string;
+	year: number;
+	make: string;
+	model: string;
+	vin: string | null;
+	stock_number: string | null;
+};
+
+export async function pushUnsentLeads(): Promise<PushResult> {
+	const supabase = adminClient();
+
+	const { data: leads, error } = await supabase
+		.from('leads')
+		.select('id,first_name,last_name,email,phone,message,source,vehicle_id')
+		.eq('adf_pushed', false)
+		.limit(50);
+
+	if (error || !leads) {
+		return { total: 0, success: 0, failed: 0, errors: [error?.message ?? 'Failed to load leads'] };
+	}
+
+	const vehicleIds = Array.from(new Set(leads.map((l) => l.vehicle_id).filter(Boolean))) as string[];
+	const vehicleMap = new Map<string, VehicleSummary>();
+	if (vehicleIds.length) {
+		const { data: vehicles, error: vehicleError } = await supabase
+			.from('vehicles')
+			.select('id,year,make,model,vin,stock_number')
+			.in('id', vehicleIds);
+		if (!vehicleError && vehicles) {
+			vehicles.forEach((v) => vehicleMap.set(v.id, v as VehicleSummary));
+		}
+	}
 
 	const result: PushResult = { total: leads.length, success: 0, failed: 0, errors: [] };
 
-	for (const lead of leads) {
+	for (const lead of leads as LeadRecord[]) {
 		try {
-			const adfXml = generateAdfXml({
-				firstName: lead.firstName,
-				lastName: lead.lastName,
-				email: lead.email,
-				phone: lead.phone,
-				message: lead.message,
+			const vehicle = lead.vehicle_id ? vehicleMap.get(lead.vehicle_id) : undefined;
+			generateAdfXml({
+				firstName: lead.first_name,
+				lastName: lead.last_name ?? undefined,
+				email: lead.email ?? undefined,
+				phone: lead.phone ?? undefined,
+				message: lead.message ?? undefined,
 				source: lead.source,
-				vehicle: lead.vehicle
+				vehicle: vehicle
+					? {
+						year: vehicle.year,
+						make: vehicle.make,
+						model: vehicle.model,
+						vin: vehicle.vin ?? undefined,
+						stockNumber: (vehicle as any).stockNumber ?? vehicle.stock_number ?? undefined
+					}
+					: undefined
 			});
 
-			// TODO: When DealerCenter SFTP is configured, push adfXml here
-			// For now, just mark as pushed (manual mode)
-			console.log(`[DealerCenter] Generated ADF/XML for lead ${lead.id} (${lead.firstName})`);
-
-			await prisma.lead.update({
-				where: { id: lead.id },
-				data: {
-					adfPushed: true,
-					adfPushedAt: new Date()
-				}
-			});
+			await supabase
+				.from('leads')
+				.update({ adf_pushed: true, adf_pushed_at: new Date().toISOString() })
+				.eq('id', lead.id);
 
 			result.success++;
 		} catch (err) {
 			result.failed++;
 			result.errors.push(`Lead ${lead.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-
-			// Retry tracking: after 3 failures, flag for manual review
-			console.error(`[DealerCenter] Failed to push lead ${lead.id}:`, err);
+			console.error('[DealerCenter] Failed to push lead', lead.id, err);
 		}
 	}
 

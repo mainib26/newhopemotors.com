@@ -1,5 +1,5 @@
-import { db } from './db';
-import type { ChatRole } from '@prisma/client';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+import type { ChatRole } from '$lib/constants/enums';
 
 export const SYSTEM_PROMPT = `You are Hope, a friendly and helpful virtual assistant for New Hope Motors, a trusted used car dealership in McKinney, Texas.
 
@@ -36,31 +36,49 @@ GUIDELINES:
 - For pricing, always note "plus tax, title, and license"
 - After helping, ask if there's anything else you can help with`;
 
-const normalizeRole = (role: string): ChatRole => role.toLowerCase() === 'assistant' ? 'ASSISTANT' : 'USER';
+const adminClient = () => getSupabaseAdminClient();
+const normalizeRole = (role: string): ChatRole => (role.toLowerCase() === 'assistant' ? 'ASSISTANT' : 'USER');
 
 export async function saveConversation(sessionId: string, messages: Array<{ role: string; content: string }>) {
-	const prisma = await db();
+	const supabase = adminClient();
 
-	let conversation = await prisma.chatConversation.findFirst({
-		where: { sessionId }
-	});
+	let conversationId: string | null = null;
+	const existing = await supabase
+		.from('chat_conversations')
+		.select('id')
+		.eq('session_id', sessionId)
+		.maybeSingle();
 
-	if (!conversation) {
-		conversation = await prisma.chatConversation.create({
-			data: { sessionId }
-		});
+	if (existing.error) {
+		console.error('Failed to load chat conversation', existing.error.message);
+	} else {
+		conversationId = existing.data?.id ?? null;
+	}
+
+	if (!conversationId) {
+		const created = await supabase
+			.from('chat_conversations')
+			.insert({ session_id: sessionId })
+			.select('id')
+			.single();
+		if (created.error) {
+			console.error('Failed to create chat conversation', created.error.message);
+			return null;
+		}
+		conversationId = created.data.id;
 	}
 
 	const latest = messages[messages.length - 1];
-	if (latest) {
-		await prisma.chatMessage.create({
-			data: {
-				conversationId: conversation.id,
-				role: normalizeRole(latest.role),
-				content: latest.content
-			}
+	if (conversationId && latest) {
+		const { error } = await supabase.from('chat_messages').insert({
+			conversation_id: conversationId,
+			role: normalizeRole(latest.role),
+			content: latest.content
 		});
+		if (error) {
+			console.error('Failed to save chat message', error.message);
+		}
 	}
 
-	return conversation.id;
+	return conversationId;
 }

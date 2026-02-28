@@ -28,11 +28,13 @@
 const statusVariant: Record<string, BadgeVariant> = {
 		NEW: 'primary',
 		CONTACTED: 'warning',
-		APPOINTMENT_SET: 'info',
+		APPOINTMENT_SET: 'primary',
 		SHOWED: 'success',
 		SOLD: 'success',
 		LOST: 'default'
 	};
+
+const getStatusVariant = (status: string): BadgeVariant => statusVariant[status] ?? 'default';
 
 	const statuses = ['NEW', 'CONTACTED', 'APPOINTMENT_SET', 'SHOWED', 'SOLD', 'LOST'];
 </script>

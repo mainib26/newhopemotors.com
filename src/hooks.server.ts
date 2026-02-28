@@ -1,7 +1,41 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { createServerClient } from '@supabase/ssr';
 import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+import type { UserRole } from '$lib/constants/enums';
+
+const adminClient = () => getSupabaseAdminClient();
+
+type AdminUser = {
+	id: string;
+	email: string;
+	name: string;
+	role: UserRole;
+	isActive: boolean;
+};
+
+async function fetchUserByEmail(email: string): Promise<AdminUser | null> {
+	const { data, error } = await adminClient()
+		.from('users')
+		.select('id,email,name,role,is_active')
+		.eq('email', email)
+		.maybeSingle();
+
+	if (error) {
+		console.error('Failed to load admin user', error.message);
+		return null;
+	}
+
+	if (!data) return null;
+
+	return {
+		id: data.id,
+		email: data.email,
+		name: data.name,
+		role: (data.role ?? 'VIEWER') as UserRole,
+		isActive: data.is_active ?? true
+	};
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const supabaseUrl = env.SUPABASE_URL;
@@ -33,18 +67,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.user = null;
 			await event.locals.supabase.auth.signOut();
 		} else {
-			const prisma = await db();
-			const dbUser = await prisma.user.findUnique({
-				where: { email: session.user.email },
-				select: { id: true, email: true, name: true, role: true, isActive: true }
-			});
+			const adminUser = await fetchUserByEmail(session.user.email);
 
-			if (dbUser && dbUser.isActive) {
+			if (adminUser && adminUser.isActive) {
 				event.locals.user = {
-					id: dbUser.id,
-					email: dbUser.email,
-					name: dbUser.name,
-					role: dbUser.role as 'ADMIN' | 'SALES' | 'VIEWER'
+					id: adminUser.id,
+					email: adminUser.email,
+					name: adminUser.name,
+					role: adminUser.role
 				};
 			} else {
 				event.locals.user = null;

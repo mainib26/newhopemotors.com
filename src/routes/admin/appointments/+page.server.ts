@@ -1,64 +1,69 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { db } from '$lib/server/db';
-import type { AppointmentStatus, AppointmentType } from '@prisma/client';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+import { APPOINTMENT_STATUSES, APPOINTMENT_TYPES, type AppointmentStatus, type AppointmentType } from '$lib/constants/enums';
+import { fetchVehicleSummaries } from '$lib/server/admin-vehicles';
 
-const APPOINTMENT_TYPES: AppointmentType[] = ['TEST_DRIVE', 'CONSULTATION', 'FINANCE_REVIEW'];
-const APPOINTMENT_STATUSES: AppointmentStatus[] = ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'NO_SHOW', 'CANCELLED'];
-
-const isAppointmentType = (value: string): value is AppointmentType => APPOINTMENT_TYPES.includes(value as AppointmentType);
-const isAppointmentStatus = (value: string): value is AppointmentStatus => APPOINTMENT_STATUSES.includes(value as AppointmentStatus);
+const adminClient = () => getSupabaseAdminClient();
 
 export const load: PageServerLoad = async ({ url }) => {
-	const prisma = await db();
+	const supabase = adminClient();
 
 	const status = url.searchParams.get('status') ?? '';
 	const dateStr = url.searchParams.get('date') ?? '';
 
-	const where: any = {};
-	if (status) where.status = status;
-	if (dateStr) {
-		const date = new Date(dateStr);
-		const nextDay = new Date(date);
-		nextDay.setDate(nextDay.getDate() + 1);
-		where.date = { gte: date, lt: nextDay };
+	let appointmentsQuery = supabase
+		.from('appointments')
+		.select('id,type,status,date,notes,lead_id,vehicle_id,created_at')
+		.order('date', { ascending: true });
+
+	if (status) {
+		appointmentsQuery = appointmentsQuery.eq('status', status);
 	}
 
-	const appointments = await prisma.appointment.findMany({
-		where,
-		include: {
-			lead: { select: { firstName: true, lastName: true, phone: true } },
-			vehicle: { select: { year: true, make: true, model: true } }
-		},
-		orderBy: { date: 'asc' }
-	});
+	if (dateStr) {
+		const date = new Date(dateStr);
+		const next = new Date(date);
+		next.setDate(next.getDate() + 1);
+		appointmentsQuery = appointmentsQuery.gte('date', date.toISOString()).lt('date', next.toISOString());
+	}
 
-	const leads = await prisma.lead.findMany({
-		where: { status: { not: 'LOST' } },
-		select: { id: true, firstName: true, lastName: true },
-		orderBy: { createdAt: 'desc' },
-		take: 50
-	});
+	const [appointmentsRes, leadsRes, vehiclesRes] = await Promise.all([
+		appointmentsQuery,
+		supabase
+			.from('leads')
+			.select('id,first_name,last_name')
+			.neq('status', 'LOST')
+			.order('created_at', { ascending: false })
+			.limit(50),
+		supabase
+			.from('vehicles')
+			.select('id,year,make,model')
+			.eq('status', 'ACTIVE')
+			.order('created_at', { ascending: false })
+	]);
 
-	const vehicles = await prisma.vehicle.findMany({
-		where: { status: 'ACTIVE' },
-		select: { id: true, year: true, make: true, model: true },
-		orderBy: { createdAt: 'desc' }
-	});
+	const appointmentLeadIds = Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.lead_id).filter(Boolean))) as string[];
+	const [leadMap, vehicleMap] = await Promise.all([
+		fetchLeadsByIds(appointmentLeadIds),
+		fetchVehicleSummaries(
+			Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.vehicle_id).filter(Boolean))) as string[]
+		)
+	]);
 
 	return {
-		appointments: appointments.map((a) => ({
+		appointments: (appointmentsRes.data ?? []).map((a) => ({
 			id: a.id,
 			type: a.type,
 			status: a.status,
-			date: a.date.toISOString(),
-			leadName: a.lead ? `${a.lead.firstName} ${a.lead.lastName ?? ''}`.trim() : '—',
-			leadPhone: a.lead?.phone ?? '',
-			vehicle: a.vehicle ? `${a.vehicle.year} ${a.vehicle.make} ${a.vehicle.model}` : null,
+			date: a.date,
+			leadName: a.lead_id ? leadMap.get(a.lead_id)?.name ?? 'Lead' : 'Lead',
+			leadPhone: a.lead_id ? leadMap.get(a.lead_id)?.phone ?? undefined : undefined,
+			vehicle: a.vehicle_id ? formatVehicle(vehicleMap.get(a.vehicle_id)) : null,
 			notes: a.notes
 		})),
-		leads: leads.map((l) => ({ id: l.id, name: `${l.firstName} ${l.lastName ?? ''}`.trim() })),
-		vehicles: vehicles.map((v) => ({ id: v.id, label: `${v.year} ${v.make} ${v.model}` })),
+		leads: (leadsRes.data ?? []).map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name ?? ''}`.trim() })),
+		vehicles: (vehiclesRes.data ?? []).map((v) => ({ id: v.id, label: `${v.year} ${v.make} ${v.model}` })),
 		filters: { status, date: dateStr }
 	};
 };
@@ -71,22 +76,20 @@ export const actions: Actions = {
 		const typeValue = formData.get('type')?.toString() || 'TEST_DRIVE';
 		const dateStr = formData.get('date')?.toString();
 
-		if (!leadId || !dateStr || !isAppointmentType(typeValue)) {
-			return fail(400, { error: 'Valid lead, date, and type are required' });
+		if (!leadId || !dateStr || !APPOINTMENT_TYPES.includes(typeValue as AppointmentType)) {
+			return fail(400, { error: 'Lead, date, and type are required' });
 		}
 
-		const [_, timePart = '00:00'] = dateStr.split('T');
-		const prisma = await db();
-		await prisma.appointment.create({
-			data: {
-				leadId,
-				vehicleId,
-				type: typeValue,
-				date: new Date(dateStr),
-				startTime: timePart.substring(0, 5),
-				status: 'SCHEDULED',
-				notes: formData.get('notes')?.toString() || null
-			}
+		const [, timePart = '00:00'] = dateStr.split('T');
+		const supabase = adminClient();
+		await supabase.from('appointments').insert({
+			lead_id: leadId,
+			vehicle_id: vehicleId,
+			type: typeValue,
+			date: new Date(dateStr).toISOString(),
+			start_time: timePart.substring(0, 5),
+			status: 'SCHEDULED',
+			notes: formData.get('notes')?.toString() || null
 		});
 
 		return { created: true };
@@ -96,10 +99,30 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = formData.get('id')?.toString();
 		const statusValue = formData.get('status')?.toString() ?? '';
-		if (!id || !isAppointmentStatus(statusValue)) return fail(400);
+		if (!id || !APPOINTMENT_STATUSES.includes(statusValue as AppointmentStatus)) return fail(400);
 
-		const prisma = await db();
-		await prisma.appointment.update({ where: { id }, data: { status: statusValue } });
+		const supabase = adminClient();
+		await supabase.from('appointments').update({ status: statusValue }).eq('id', id);
 		return { updated: true };
 	}
 };
+
+function formatVehicle(vehicle?: { year: number; make: string; model: string } | null) {
+	if (!vehicle) return null;
+	return `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+}
+
+async function fetchLeadsByIds(ids: string[]) {
+	if (!ids.length) return new Map<string, { name: string; phone: string | null }>();
+	const { data, error } = await adminClient()
+		.from('leads')
+		.select('id,first_name,last_name,phone')
+		.in('id', ids);
+	if (error || !data) {
+		console.error('Failed to load leads by ids', error?.message);
+		return new Map();
+	}
+	return new Map(
+		data.map((lead) => [lead.id, { name: `${lead.first_name} ${lead.last_name ?? ''}`.trim(), phone: lead.phone }])
+	);
+}

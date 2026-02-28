@@ -1,30 +1,38 @@
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { db } from '$lib/server/db';
-import type { FinanceStatus } from '@prisma/client';
+import { getSupabaseAdminClient } from '$lib/server/supabase';
+import { FINANCE_STATUSES, type FinanceStatus } from '$lib/constants/enums';
+import { fetchVehicleSummaries } from '$lib/server/admin-vehicles';
 
-const FINANCE_STATUSES: FinanceStatus[] = ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'DENIED'];
-const isFinanceStatus = (value: string): value is FinanceStatus => FINANCE_STATUSES.includes(value as FinanceStatus);
+const adminClient = () => getSupabaseAdminClient();
 
 export const load: PageServerLoad = async () => {
-	const prisma = await db();
+	const supabase = adminClient();
 
-	const applications = await prisma.financeApplication.findMany({
-		orderBy: { createdAt: 'desc' },
-		take: 50,
-		include: { vehicle: { select: { year: true, make: true, model: true } } }
-	});
+	const applicationsRes = await supabase
+		.from('finance_applications')
+		.select('id,lead_id,first_name,last_name,email,phone,status,vehicle_id,created_at')
+		.order('created_at', { ascending: false })
+		.limit(50);
+
+	if (applicationsRes.error) {
+		console.error('Failed to load finance applications', applicationsRes.error.message);
+	}
+
+	const vehicleMap = await fetchVehicleSummaries(
+		Array.from(new Set((applicationsRes.data ?? []).map((app) => app.vehicle_id).filter(Boolean))) as string[]
+	);
 
 	return {
-		applications: applications.map((a) => ({
+		applications: (applicationsRes.data ?? []).map((a) => ({
 			id: a.id,
-			firstName: a.firstName,
-			lastName: a.lastName,
+			firstName: a.first_name,
+			lastName: a.last_name,
 			email: a.email,
 			phone: a.phone,
 			status: a.status,
-			vehicleInterest: a.vehicle ? `${a.vehicle.year} ${a.vehicle.make} ${a.vehicle.model}` : null,
-			createdAt: a.createdAt.toISOString()
+			vehicleInterest: a.vehicle_id ? formatVehicle(vehicleMap.get(a.vehicle_id)) : null,
+			createdAt: a.created_at
 		}))
 	};
 };
@@ -34,10 +42,15 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = formData.get('id')?.toString();
 		const statusValue = formData.get('status')?.toString() ?? '';
-		if (!id || !isFinanceStatus(statusValue)) return fail(400);
+		if (!id || !FINANCE_STATUSES.includes(statusValue as FinanceStatus)) return fail(400);
 
-		const prisma = await db();
-		await prisma.financeApplication.update({ where: { id }, data: { status: statusValue } });
+		const supabase = adminClient();
+		await supabase.from('finance_applications').update({ status: statusValue }).eq('id', id);
 		return { updated: true };
 	}
 };
+
+function formatVehicle(vehicle?: { year: number; make: string; model: string } | null) {
+	if (!vehicle) return null;
+	return `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+}

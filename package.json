@@ -8,38 +8,26 @@
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "format": "prettier --write .",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.4.2",
-    "@prisma/client": "^7.4.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.45.1",
-    "dotenv": "^17.3.1",
-    "pg": "^8.13.0"
+    "dotenv": "^17.3.1"
   },
   "devDependencies": {
     "@sveltejs/adapter-cloudflare": "^7.2.8",
     "@sveltejs/kit": "^2.53.4",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.1.0",
-    "@types/pg": "^8.16.0",
     "esbuild": "^0.24.2",
     "prettier": "^3.5.0",
     "prettier-plugin-svelte": "^3.3.0",
-    "prisma": "^7.4.2",
     "svelte": "^5.23.0",
     "svelte-check": "^4.2.0",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
     "vite": "^6.2.0"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

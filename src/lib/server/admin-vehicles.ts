@@ -35,6 +35,13 @@ const VEHICLE_SELECT = [
   `photos:vehicle_photos(${PHOTO_FIELDS})`
 ].join(',');
 
+export type VehicleSummary = {
+  year: number;
+  make: string;
+  model: string;
+  trim?: string | null;
+};
+
 export type AdminVehiclePhoto = {
   id: string;
   vehicleId: string;
@@ -193,13 +200,14 @@ export function generateVehicleSlug(year: number, make: string, model: string, t
   return `${slugBase}-${vinSuffix}`.replace(/-+/g, '-');
 }
 
-export async function listAdminVehicles(filters: VehicleFilters) {
+export async function listAdminVehicles(filters: VehicleFilters): Promise<{ vehicles: AdminVehicle[]; total: number; page: number; perPage: number }> {
+	const client = supabase();
   const perPage = filters.perPage ?? 20;
   const page = filters.page ?? 1;
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  let query = supabase
+  let query = client
     .from('vehicles')
     .select(VEHICLE_SELECT, { count: 'exact' })
     .order('createdAt', { ascending: false })
@@ -234,8 +242,9 @@ export async function listAdminVehicles(filters: VehicleFilters) {
   };
 }
 
-export async function getAdminVehicle(id: string) {
-  const { data, error } = await supabase
+export async function getAdminVehicle(id: string): Promise<AdminVehicle> {
+	const client = supabase();
+  const { data, error } = await client
     .from('vehicles')
     .select(VEHICLE_SELECT)
     .eq('id', id)
@@ -248,26 +257,28 @@ export async function getAdminVehicle(id: string) {
   return normalizeVehicle(data);
 }
 
-export async function createAdminVehicle(payload: VehiclePayload) {
+export async function createAdminVehicle(payload: VehiclePayload): Promise<AdminVehicle> {
+	const client = supabase();
   const insertPayload = {
     ...payload,
     features: JSON.stringify(payload.features ?? [])
   };
 
-  const { data, error } = await supabase().from('vehicles').insert(insertPayload).select(VEHICLE_SELECT).single();
+  const { data, error } = await client.from('vehicles').insert(insertPayload).select(VEHICLE_SELECT).single();
   if (error) {
     throw new Error(`Failed to create vehicle: ${error.message}`);
   }
   return normalizeVehicle(data);
 }
 
-export async function updateAdminVehicle(id: string, payload: VehiclePayload) {
+export async function updateAdminVehicle(id: string, payload: VehiclePayload): Promise<AdminVehicle> {
+	const client = supabase();
   const updatePayload = {
     ...payload,
     features: JSON.stringify(payload.features ?? [])
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('vehicles')
     .update(updatePayload)
     .eq('id', id)
@@ -281,21 +292,22 @@ export async function updateAdminVehicle(id: string, payload: VehiclePayload) {
   return normalizeVehicle(data);
 }
 
-export async function deleteAdminVehicle(id: string) {
-  const { data: photos } = await supabase
+export async function deleteAdminVehicle(id: string): Promise<void> {
+	const client = supabase();
+  const { data: photos } = await client
     .from('vehicle_photos')
     .select('id,supabasePath')
     .eq('vehicleId', id);
 
   if (photos?.length) {
-    const paths = photos.map((photo) => photo.supabasePath).filter(Boolean) as string[];
+    const paths = photos.map((photo: { supabasePath: string | null }) => photo.supabasePath).filter(Boolean) as string[];
     if (paths.length) {
-      await supabase().storage.from(VEHICLE_BUCKET).remove(paths);
+      await client.storage.from(VEHICLE_BUCKET).remove(paths);
     }
-    await supabase().from('vehicle_photos').delete().eq('vehicleId', id);
+    await client.from('vehicle_photos').delete().eq('vehicleId', id);
   }
 
-  const { error } = await supabase().from('vehicles').delete().eq('id', id);
+  const { error } = await client.from('vehicles').delete().eq('id', id);
   if (error) {
     throw new Error(`Failed to delete vehicle: ${error.message}`);
   }
@@ -311,18 +323,19 @@ function getFileExtension(file: File) {
   return 'jpg';
 }
 
-export async function uploadVehiclePhotos(vehicleId: string, files: File[]) {
+export async function uploadVehiclePhotos(vehicleId: string, files: File[]): Promise<AdminVehiclePhoto[]> {
+	const client = supabase();
   if (!files.length) {
     return [];
   }
 
-  const { count } = await supabase
+  const { count } = await client
     .from('vehicle_photos')
     .select('id', { count: 'exact', head: true })
     .eq('vehicleId', vehicleId);
 
   const startIndex = count ?? 0;
-  const storage = supabase().storage.from(VEHICLE_BUCKET);
+  const storage = client.storage.from(VEHICLE_BUCKET);
   const uploaded: AdminVehiclePhoto[] = [];
 
   for (let i = 0; i < files.length; i++) {
@@ -340,7 +353,7 @@ export async function uploadVehiclePhotos(vehicleId: string, files: File[]) {
     }
 
     const publicUrl = storage.getPublicUrl(path).data.publicUrl;
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('vehicle_photos')
       .insert({
         vehicleId,
@@ -371,9 +384,10 @@ export async function uploadVehiclePhotos(vehicleId: string, files: File[]) {
   return uploaded;
 }
 
-export async function deleteVehiclePhoto(photoId: string) {
-  const storage = supabase().storage.from(VEHICLE_BUCKET);
-  const { data, error } = await supabase
+export async function deleteVehiclePhoto(photoId: string): Promise<void> {
+	const client = supabase();
+  const storage = client.storage.from(VEHICLE_BUCKET);
+  const { data, error } = await client
     .from('vehicle_photos')
     .select('id,vehicleId,supabasePath,isPrimary')
     .eq('id', photoId)
@@ -387,10 +401,10 @@ export async function deleteVehiclePhoto(photoId: string) {
     await storage.remove([data.supabasePath]);
   }
 
-  await supabase().from('vehicle_photos').delete().eq('id', photoId);
+  await client.from('vehicle_photos').delete().eq('id', photoId);
 
   if (data.isPrimary) {
-    const { data: first } = await supabase
+    const { data: first } = await client
       .from('vehicle_photos')
       .select('id')
       .eq('vehicleId', data.vehicleId)
@@ -399,18 +413,39 @@ export async function deleteVehiclePhoto(photoId: string) {
       .single();
 
     if (first) {
-      await supabase().from('vehicle_photos').update({ isPrimary: true }).eq('id', first.id);
+      await client.from('vehicle_photos').update({ isPrimary: true }).eq('id', first.id);
     }
   }
 }
 
-export async function reorderVehiclePhotos(order: string[]) {
+export async function reorderVehiclePhotos(order: string[]): Promise<void> {
+	const client = supabase();
   await Promise.all(
-    order.map((photoId, index) => supabase().from('vehicle_photos').update({ sortOrder: index }).eq('id', photoId))
+    order.map((photoId, index) => client.from('vehicle_photos').update({ sortOrder: index }).eq('id', photoId))
   );
 }
 
-export async function markPrimaryPhoto(photoId: string, vehicleId: string) {
-  await supabase().from('vehicle_photos').update({ isPrimary: false }).eq('vehicleId', vehicleId);
-  await supabase().from('vehicle_photos').update({ isPrimary: true }).eq('id', photoId);
+export async function markPrimaryPhoto(photoId: string, vehicleId: string): Promise<void> {
+	const client = supabase();
+  await client.from('vehicle_photos').update({ isPrimary: false }).eq('vehicleId', vehicleId);
+  await client.from('vehicle_photos').update({ isPrimary: true }).eq('id', photoId);
+}
+
+export async function fetchVehicleSummaries(ids: string[]): Promise<Map<string, VehicleSummary>> {
+	const client = supabase();
+	if (!ids.length) {
+		return new Map<string, { year: number; make: string; model: string }>();
+	}
+
+	const { data, error } = await client
+		.from('vehicles')
+		.select('id,year,make,model,trim')
+		.in('id', ids);
+
+	if (error || !data) {
+		console.error('Failed to fetch vehicle summaries', error?.message);
+		return new Map();
+	}
+
+	return new Map(data.map((v: any) => [v.id, { year: v.year, make: v.make, model: v.model, trim: v.trim ?? null }]));
 }
