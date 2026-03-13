@@ -18,27 +18,33 @@
 	let supabase: ReturnType<typeof createClient> | null = null;
 
 	onMount(async () => {
+		supabase = createClient(data.supabaseUrl, data.supabaseAnonKey);
+
+		// Try token-based flow (hash fragment redirect)
 		const accessToken = $page.url.searchParams.get('access_token');
 		const refreshToken = $page.url.searchParams.get('refresh_token');
 
-		if (!accessToken || !refreshToken) {
-			error = 'Invalid or expired reset link. Please request a new one.';
+		if (accessToken && refreshToken) {
+			const { error: sessionError } = await supabase.auth.setSession({
+				access_token: accessToken,
+				refresh_token: refreshToken
+			});
+			if (sessionError) {
+				error = 'This reset link has expired. Please request a new one.';
+				return;
+			}
+			ready = true;
 			return;
 		}
 
-		supabase = createClient(data.supabaseUrl, data.supabaseAnonKey);
-
-		const { error: sessionError } = await supabase.auth.setSession({
-			access_token: accessToken,
-			refresh_token: refreshToken
-		});
-
-		if (sessionError) {
-			error = 'This reset link has expired. Please request a new one.';
+		// PKCE flow — session was already established server-side via code exchange
+		const { data: sessionData } = await supabase.auth.getSession();
+		if (sessionData?.session) {
+			ready = true;
 			return;
 		}
 
-		ready = true;
+		error = 'Invalid or expired reset link. Please request a new one.';
 	});
 
 	async function handleSubmit(e: Event) {
