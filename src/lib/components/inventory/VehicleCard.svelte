@@ -1,5 +1,7 @@
 <script lang="ts">
-		interface Props {
+	import Badge from '$lib/components/ui/Badge.svelte';
+
+	interface Props {
 		vehicle: {
 			id: string;
 			year: number;
@@ -56,6 +58,9 @@
 				<span class="text-xs mt-2 opacity-50">Photo coming soon</span>
 			</div>
 		{/if}
+		<div class="absolute top-3 left-3">
+			<Badge variant="primary">{vehicle.bodyType}</Badge>
+		</div>
 	</div>
 
 	<div class="p-4 flex-1 flex flex-col">
