@@ -85,7 +85,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.locals.user = null;
 	}
 
-	if (event.url.pathname.startsWith('/admin') && !event.url.pathname.startsWith('/admin/login')) {
+	if (event.url.pathname.startsWith('/admin') && !event.url.pathname.startsWith('/admin/login') && !event.url.pathname.startsWith('/admin/reset-password')) {
 		if (!event.locals.user) {
 			throw redirect(302, '/admin/login');
 		}
