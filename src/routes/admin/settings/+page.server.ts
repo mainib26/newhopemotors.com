@@ -9,9 +9,9 @@ const isUserRole = (value: string): value is UserRole => USER_ROLES.includes(val
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { data, error } = await adminClient()
-		.from('users')
-		.select('id,name,email,role,is_active,created_at')
-		.order('created_at', { ascending: true });
+		.from('Users')
+		.select('id,name,email,role,isActive,createdAt')
+		.order('createdAt', { ascending: true });
 
 	if (error) {
 		console.error('Failed to load users', error.message);
@@ -24,8 +24,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			name: u.name,
 			email: u.email,
 			role: u.role as UserRole,
-			isActive: u.is_active ?? true,
-			createdAt: (u.created_at ?? new Date().toISOString())
+			isActive: u.isActive ?? true,
+			createdAt: (u.createdAt ?? new Date().toISOString())
 		})),
 		isAdmin: locals.user?.role === 'ADMIN'
 	};
@@ -48,7 +48,7 @@ export const actions: Actions = {
 		}
 
 		const existing = await adminClient()
-			.from('users')
+			.from('Users')
 			.select('id')
 			.eq('email', email)
 			.maybeSingle();
@@ -69,13 +69,14 @@ export const actions: Actions = {
 		}
 
 		const { error: insertError } = await adminClient()
-			.from('users')
+			.from('Users')
 			.insert({
+				id: crypto.randomUUID(),
 				name,
 				email,
 				role: roleValue,
-				is_active: true,
-				supabase_id: supabaseData?.user?.id ?? null
+				isActive: true,
+				supabaseId: supabaseData?.user?.id ?? null
 			});
 
 		if (insertError) {
@@ -96,17 +97,17 @@ export const actions: Actions = {
 		if (!userId) return fail(400);
 
 		const { data, error } = await adminClient()
-			.from('users')
-			.update({ is_active: isActive })
+			.from('Users')
+			.update({ isActive: isActive })
 			.eq('id', userId)
-			.select('email,supabase_id')
+			.select('email,supabaseId')
 			.single();
 
 		if (error || !data) {
 			return fail(400, { userError: error?.message ?? 'Failed to update user' });
 		}
 
-		await updateSupabaseUserActiveState(data.email, data.supabase_id ?? null, isActive);
+		await updateSupabaseUserActiveState(data.email, data.supabaseId ?? null, isActive);
 		return { userToggled: true };
 	}
 };

@@ -257,6 +257,7 @@ export async function getAdminVehicle(id: string): Promise<AdminVehicle> {
 export async function createAdminVehicle(payload: VehiclePayload): Promise<AdminVehicle> {
 	const client = supabase();
   const insertPayload = {
+    id: crypto.randomUUID(),
     ...payload,
     features: JSON.stringify(payload.features ?? [])
   };
@@ -353,6 +354,7 @@ export async function uploadVehiclePhotos(vehicleId: string, files: File[]): Pro
     const { data, error } = await client
       .from('VehiclePhoto')
       .insert({
+        id: crypto.randomUUID(),
         vehicleId,
         url: publicUrl,
         supabasePath: path,

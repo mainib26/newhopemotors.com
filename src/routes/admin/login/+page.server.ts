@@ -26,12 +26,12 @@ export const actions: Actions = {
 		}
 
 		const { data: user, error: userError } = await adminClient()
-			.from('users')
-			.select('id,is_active')
+			.from('Users')
+			.select('id,isActive')
 			.eq('email', email)
 			.maybeSingle();
 
-		if (userError || !user || user.is_active === false) {
+		if (userError || !user || user.isActive === false) {
 			await locals.supabase.auth.signOut();
 			return fail(403, { error: 'Account is inactive or missing access.', email });
 		}

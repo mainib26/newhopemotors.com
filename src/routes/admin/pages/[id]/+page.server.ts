@@ -6,8 +6,8 @@ const adminClient = () => getSupabaseAdminClient();
 
 export const load: PageServerLoad = async ({ params }) => {
 	const { data, error: loadError } = await adminClient()
-		.from('pages')
-		.select('id,slug,title,content,meta_title,meta_description,published_at,created_at,updated_at')
+		.from('Page')
+		.select('id,slug,title,content,metaTitle,metaDescription,publishedAt,createdAt,updatedAt')
 		.eq('id', params.id)
 		.maybeSingle();
 
@@ -22,11 +22,11 @@ export const load: PageServerLoad = async ({ params }) => {
 			slug: data.slug,
 			title: data.title,
 			content: data.content,
-			metaTitle: data.meta_title,
-			metaDescription: data.meta_description,
-			published: Boolean(data.published_at),
-			createdAt: data.created_at,
-			updatedAt: data.updated_at
+			metaTitle: data.metaTitle,
+			metaDescription: data.metaDescription,
+			published: Boolean(data.publishedAt),
+			createdAt: data.createdAt,
+			updatedAt: data.updatedAt
 		}
 	};
 };
@@ -44,8 +44,8 @@ export const actions: Actions = {
 
 		const supabase = adminClient();
 		const { data: existing, error: fetchError } = await supabase
-			.from('pages')
-			.select('published_at')
+			.from('Page')
+			.select('publishedAt')
 			.eq('id', params.id)
 			.maybeSingle();
 
@@ -53,16 +53,16 @@ export const actions: Actions = {
 			return fail(404, { error: 'Page not found' });
 		}
 
-		const publishedAt = published ? existing.published_at ?? new Date().toISOString() : null;
+		const publishedAt = published ? existing.publishedAt ?? new Date().toISOString() : null;
 
 		const { error: updateError } = await supabase
-			.from('pages')
+			.from('Page')
 			.update({
 				title,
 				content,
-				meta_title: metaTitle,
-				meta_description: metaDescription,
-				published_at: publishedAt
+				metaTitle,
+				metaDescription,
+				publishedAt
 			})
 			.eq('id', params.id);
 

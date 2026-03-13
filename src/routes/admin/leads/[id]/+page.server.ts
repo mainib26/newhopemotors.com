@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ params }) => {
 	const supabase = adminClient();
 
 	const { data: lead, error: leadError } = await supabase
-		.from('leads')
-		.select('id,first_name,last_name,email,phone,status,source,message,vehicle_id,assigned_to_id,created_at,updated_at')
+		.from('Leads')
+		.select('id,firstName,lastName,email,phone,status,source,message,vehicleId,assignedToId,createdAt,updatedAt')
 		.eq('id', params.id)
 		.maybeSingle();
 
@@ -20,23 +20,23 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 	if (!lead) throw error(404, 'Lead not found');
 
-	const vehicleMap = lead.vehicle_id ? await fetchVehicleSummaries([lead.vehicle_id]) : new Map();
+	const vehicleMap = lead.vehicleId ? await fetchVehicleSummaries([lead.vehicleId]) : new Map();
 
 	const [notesRes, appointmentsRes] = await Promise.all([
 		supabase
-			.from('lead_notes')
-			.select('id,author_id,content,created_at')
-			.eq('lead_id', params.id)
-			.order('created_at', { ascending: false }),
+			.from('LeadNotes')
+			.select('id,authorId,content,createdAt')
+			.eq('leadId', params.id)
+			.order('createdAt', { ascending: false }),
 		supabase
-			.from('appointments')
-			.select('id,type,status,date,notes,vehicle_id,created_at,updated_at')
-			.eq('lead_id', params.id)
+			.from('Appointments')
+			.select('id,type,status,date,notes,vehicleId,createdAt,updatedAt')
+			.eq('leadId', params.id)
 			.order('date', { ascending: false })
 	]);
 
-	const noteAuthorIds = Array.from(new Set((notesRes.data ?? []).map((note) => note.author_id))).filter(Boolean) as string[];
-	const appointmentVehicleIds = Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.vehicle_id).filter(Boolean))) as string[];
+	const noteAuthorIds = Array.from(new Set((notesRes.data ?? []).map((note) => note.authorId))).filter(Boolean) as string[];
+	const appointmentVehicleIds = Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.vehicleId).filter(Boolean))) as string[];
 
 	const [authors, appointmentVehicles] = await Promise.all([
 		fetchUsersByIds(noteAuthorIds),
@@ -46,45 +46,45 @@ export const load: PageServerLoad = async ({ params }) => {
 	const notes = (notesRes.data ?? []).map((note) => ({
 		id: note.id,
 		content: note.content,
-		createdAt: note.created_at,
-		author: note.author_id ? authors.get(note.author_id) ?? 'Unknown' : 'System'
+		createdAt: note.createdAt,
+		author: note.authorId ? authors.get(note.authorId) ?? 'Unknown' : 'System'
 	}));
 
 	const appointments = (appointmentsRes.data ?? []).map((appt) => {
-		const summary = appt.vehicle_id ? appointmentVehicles.get(appt.vehicle_id) : null;
+		const summary = appt.vehicleId ? appointmentVehicles.get(appt.vehicleId) : null;
 		return {
 			id: appt.id,
 			type: appt.type,
 			status: appt.status,
 			date: appt.date,
-			createdAt: appt.created_at,
-			updatedAt: appt.updated_at,
+			createdAt: appt.createdAt,
+			updatedAt: appt.updatedAt,
 			notes: appt.notes,
-			vehicle: appt.vehicle_id && summary ? { id: appt.vehicle_id, ...summary } : null
+			vehicle: appt.vehicleId && summary ? { id: appt.vehicleId, ...summary } : null
 		};
 	});
 
 	const leadUsers = await fetchActiveUsers();
 
-	const vehicleSummary = lead.vehicle_id ? vehicleMap.get(lead.vehicle_id) : null;
+	const vehicleSummary = lead.vehicleId ? vehicleMap.get(lead.vehicleId) : null;
 
 	return {
 		lead: {
 			id: lead.id,
-			firstName: lead.first_name,
-			lastName: lead.last_name,
+			firstName: lead.firstName,
+			lastName: lead.lastName,
 			email: lead.email,
 			phone: lead.phone,
 			status: lead.status,
 			source: lead.source,
 			message: lead.message,
-			vehicleId: lead.vehicle_id,
-			vehicle: lead.vehicle_id && vehicleSummary
-				? { id: lead.vehicle_id, ...vehicleSummary }
+			vehicleId: lead.vehicleId,
+			vehicle: lead.vehicleId && vehicleSummary
+				? { id: lead.vehicleId, ...vehicleSummary }
 				: null,
-			assignedToId: lead.assigned_to_id,
-			createdAt: lead.created_at,
-			updatedAt: lead.updated_at,
+			assignedToId: lead.assignedToId,
+			createdAt: lead.createdAt,
+			updatedAt: lead.updatedAt,
 			notes,
 			appointments
 		},
@@ -101,7 +101,7 @@ export const actions: Actions = {
 		}
 
 		const supabase = adminClient();
-		await supabase.from('leads').update({ status: statusValue }).eq('id', params.id);
+		await supabase.from('Leads').update({ status: statusValue }).eq('id', params.id);
 		return { updated: true };
 	},
 
@@ -110,7 +110,7 @@ export const actions: Actions = {
 		const userId = formData.get('userId')?.toString() || null;
 
 		const supabase = adminClient();
-		await supabase.from('leads').update({ assigned_to_id: userId }).eq('id', params.id);
+		await supabase.from('Leads').update({ assignedToId: userId }).eq('id', params.id);
 		return { updated: true };
 	},
 
@@ -120,9 +120,10 @@ export const actions: Actions = {
 		if (!content) return fail(400, { noteError: 'Note cannot be empty' });
 
 		const supabase = adminClient();
-		await supabase.from('lead_notes').insert({
-			lead_id: params.id,
-			author_id: locals.user!.id,
+		await supabase.from('LeadNotes').insert({
+			id: crypto.randomUUID(),
+			leadId: params.id,
+			authorId: locals.user!.id,
 			content
 		});
 		return { noteAdded: true };
@@ -131,7 +132,7 @@ export const actions: Actions = {
 
 async function fetchUsersByIds(ids: string[]) {
 	if (!ids.length) return new Map<string, string>();
-	const { data, error } = await adminClient().from('users').select('id,name').in('id', ids);
+	const { data, error } = await adminClient().from('Users').select('id,name').in('id', ids);
 	if (error || !data) {
 		console.error('Failed to load users by ids', error?.message);
 		return new Map();
@@ -141,9 +142,9 @@ async function fetchUsersByIds(ids: string[]) {
 
 async function fetchActiveUsers() {
 	const { data, error } = await adminClient()
-		.from('users')
+		.from('Users')
 		.select('id,name')
-		.eq('is_active', true)
+		.eq('isActive', true)
 		.order('name', { ascending: true });
 	if (error || !data) {
 		console.error('Failed to load users', error?.message);

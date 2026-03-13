@@ -30,16 +30,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			message: 'Finance pre-qualification application'
 		});
 
-		await insertRow('finance_applications', {
-			lead_id: lead?.id ?? null,
-			first_name: firstName,
-			last_name: lastName,
+		await insertRow('FinanceApplications', {
+			id: crypto.randomUUID(),
+			leadId: lead?.id ?? null,
+			firstName,
+			lastName,
 			email: email || '',
 			phone,
-			employment_status: (formData.get('employmentStatus') as string) || null,
-			monthly_income: Number(formData.get('monthlyIncome')) || null,
-			housing_status: (formData.get('housingStatus') as string) || null,
-			monthly_housing_payment: Number(formData.get('monthlyHousingPayment')) || null,
+			employmentStatus: (formData.get('employmentStatus') as string) || null,
+			monthlyIncome: Number(formData.get('monthlyIncome')) || null,
+			housingStatus: (formData.get('housingStatus') as string) || null,
+			monthlyHousingPayment: Number(formData.get('monthlyHousingPayment')) || null,
 			status: 'SUBMITTED'
 		});
 

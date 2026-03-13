@@ -16,8 +16,8 @@ type AdminUser = {
 
 async function fetchUserByEmail(email: string): Promise<AdminUser | null> {
 	const { data, error } = await adminClient()
-		.from('users')
-		.select('id,email,name,role,is_active')
+		.from('Users')
+		.select('id,email,name,role,isActive')
 		.eq('email', email)
 		.maybeSingle();
 
@@ -33,7 +33,7 @@ async function fetchUserByEmail(email: string): Promise<AdminUser | null> {
 		email: data.email,
 		name: data.name,
 		role: (data.role ?? 'VIEWER') as UserRole,
-		isActive: data.is_active ?? true
+		isActive: data.isActive ?? true
 	};
 }
 

@@ -12,13 +12,13 @@ const adminClient = () => getSupabaseAdminClient();
 
 type LeadRecord = {
 	id: string;
-	first_name: string;
-	last_name: string | null;
+	firstName: string;
+	lastName: string | null;
 	email: string | null;
 	phone: string | null;
 	message: string | null;
 	source: string;
-	vehicle_id: string | null;
+	vehicleId: string | null;
 };
 
 type VehicleSummary = {
@@ -27,28 +27,28 @@ type VehicleSummary = {
 	make: string;
 	model: string;
 	vin: string | null;
-	stock_number: string | null;
+	stockNumber: string | null;
 };
 
 export async function pushUnsentLeads(): Promise<PushResult> {
 	const supabase = adminClient();
 
 	const { data: leads, error } = await supabase
-		.from('leads')
-		.select('id,first_name,last_name,email,phone,message,source,vehicle_id')
-		.eq('adf_pushed', false)
+		.from('Leads')
+		.select('id,firstName,lastName,email,phone,message,source,vehicleId')
+		.eq('adfPushed', false)
 		.limit(50);
 
 	if (error || !leads) {
 		return { total: 0, success: 0, failed: 0, errors: [error?.message ?? 'Failed to load leads'] };
 	}
 
-	const vehicleIds = Array.from(new Set(leads.map((l) => l.vehicle_id).filter(Boolean))) as string[];
+	const vehicleIds = Array.from(new Set(leads.map((l) => l.vehicleId).filter(Boolean))) as string[];
 	const vehicleMap = new Map<string, VehicleSummary>();
 	if (vehicleIds.length) {
 		const { data: vehicles, error: vehicleError } = await supabase
 			.from('Vehicles')
-			.select('id,year,make,model,vin,stock_number')
+			.select('id,year,make,model,vin,stockNumber')
 			.in('id', vehicleIds);
 		if (!vehicleError && vehicles) {
 			vehicles.forEach((v) => vehicleMap.set(v.id, v as VehicleSummary));
@@ -59,10 +59,10 @@ export async function pushUnsentLeads(): Promise<PushResult> {
 
 	for (const lead of leads as LeadRecord[]) {
 		try {
-			const vehicle = lead.vehicle_id ? vehicleMap.get(lead.vehicle_id) : undefined;
+			const vehicle = lead.vehicleId ? vehicleMap.get(lead.vehicleId) : undefined;
 			generateAdfXml({
-				firstName: lead.first_name,
-				lastName: lead.last_name ?? undefined,
+				firstName: lead.firstName,
+				lastName: lead.lastName ?? undefined,
 				email: lead.email ?? undefined,
 				phone: lead.phone ?? undefined,
 				message: lead.message ?? undefined,
@@ -73,14 +73,14 @@ export async function pushUnsentLeads(): Promise<PushResult> {
 						make: vehicle.make,
 						model: vehicle.model,
 						vin: vehicle.vin ?? undefined,
-						stockNumber: (vehicle as any).stockNumber ?? vehicle.stock_number ?? undefined
+						stockNumber: vehicle.stockNumber ?? undefined
 					}
 					: undefined
 			});
 
 			await supabase
-				.from('leads')
-				.update({ adf_pushed: true, adf_pushed_at: new Date().toISOString() })
+				.from('Leads')
+				.update({ adfPushed: true, adfPushedAt: new Date().toISOString() })
 				.eq('id', lead.id);
 
 			result.success++;

@@ -13,8 +13,8 @@ export const load: PageServerLoad = async ({ url }) => {
 	const dateStr = url.searchParams.get('date') ?? '';
 
 	let appointmentsQuery = supabase
-		.from('appointments')
-		.select('id,type,status,date,notes,lead_id,vehicle_id,created_at')
+		.from('Appointments')
+		.select('id,type,status,date,notes,leadId,vehicleId,createdAt')
 		.order('date', { ascending: true });
 
 	if (status) {
@@ -31,23 +31,23 @@ export const load: PageServerLoad = async ({ url }) => {
 	const [appointmentsRes, leadsRes, vehiclesRes] = await Promise.all([
 		appointmentsQuery,
 		supabase
-			.from('leads')
-			.select('id,first_name,last_name')
+			.from('Leads')
+			.select('id,firstName,lastName')
 			.neq('status', 'LOST')
-			.order('created_at', { ascending: false })
+			.order('createdAt', { ascending: false })
 			.limit(50),
 		supabase
 			.from('Vehicles')
 			.select('id,year,make,model')
 			.eq('status', 'ACTIVE')
-			.order('created_at', { ascending: false })
+			.order('createdAt', { ascending: false })
 	]);
 
-	const appointmentLeadIds = Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.lead_id).filter(Boolean))) as string[];
+	const appointmentLeadIds = Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.leadId).filter(Boolean))) as string[];
 	const [leadMap, vehicleMap] = await Promise.all([
 		fetchLeadsByIds(appointmentLeadIds),
 		fetchVehicleSummaries(
-			Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.vehicle_id).filter(Boolean))) as string[]
+			Array.from(new Set((appointmentsRes.data ?? []).map((appt) => appt.vehicleId).filter(Boolean))) as string[]
 		)
 	]);
 
@@ -57,12 +57,12 @@ export const load: PageServerLoad = async ({ url }) => {
 			type: a.type,
 			status: a.status,
 			date: a.date,
-			leadName: a.lead_id ? leadMap.get(a.lead_id)?.name ?? 'Lead' : 'Lead',
-			leadPhone: a.lead_id ? leadMap.get(a.lead_id)?.phone ?? undefined : undefined,
-			vehicle: a.vehicle_id ? formatVehicle(vehicleMap.get(a.vehicle_id)) : null,
+			leadName: a.leadId ? leadMap.get(a.leadId)?.name ?? 'Lead' : 'Lead',
+			leadPhone: a.leadId ? leadMap.get(a.leadId)?.phone ?? undefined : undefined,
+			vehicle: a.vehicleId ? formatVehicle(vehicleMap.get(a.vehicleId)) : null,
 			notes: a.notes
 		})),
-		leads: (leadsRes.data ?? []).map((l) => ({ id: l.id, name: `${l.first_name} ${l.last_name ?? ''}`.trim() })),
+		leads: (leadsRes.data ?? []).map((l) => ({ id: l.id, name: `${l.firstName} ${l.lastName ?? ''}`.trim() })),
 		vehicles: (vehiclesRes.data ?? []).map((v) => ({ id: v.id, label: `${v.year} ${v.make} ${v.model}` })),
 		filters: { status, date: dateStr }
 	};
@@ -82,12 +82,13 @@ export const actions: Actions = {
 
 		const [, timePart = '00:00'] = dateStr.split('T');
 		const supabase = adminClient();
-		await supabase.from('appointments').insert({
-			lead_id: leadId,
-			vehicle_id: vehicleId,
+		await supabase.from('Appointments').insert({
+			id: crypto.randomUUID(),
+			leadId,
+			vehicleId,
 			type: typeValue,
 			date: new Date(dateStr).toISOString(),
-			start_time: timePart.substring(0, 5),
+			startTime: timePart.substring(0, 5),
 			status: 'SCHEDULED',
 			notes: formData.get('notes')?.toString() || null
 		});
@@ -102,7 +103,7 @@ export const actions: Actions = {
 		if (!id || !APPOINTMENT_STATUSES.includes(statusValue as AppointmentStatus)) return fail(400);
 
 		const supabase = adminClient();
-		await supabase.from('appointments').update({ status: statusValue }).eq('id', id);
+		await supabase.from('Appointments').update({ status: statusValue }).eq('id', id);
 		return { updated: true };
 	}
 };
@@ -115,14 +116,14 @@ function formatVehicle(vehicle?: { year: number; make: string; model: string } |
 async function fetchLeadsByIds(ids: string[]) {
 	if (!ids.length) return new Map<string, { name: string; phone: string | null }>();
 	const { data, error } = await adminClient()
-		.from('leads')
-		.select('id,first_name,last_name,phone')
+		.from('Leads')
+		.select('id,firstName,lastName,phone')
 		.in('id', ids);
 	if (error || !data) {
 		console.error('Failed to load leads by ids', error?.message);
 		return new Map();
 	}
 	return new Map(
-		data.map((lead) => [lead.id, { name: `${lead.first_name} ${lead.last_name ?? ''}`.trim(), phone: lead.phone }])
+		data.map((lead) => [lead.id, { name: `${lead.firstName} ${lead.lastName ?? ''}`.trim(), phone: lead.phone }])
 	);
 }

@@ -44,9 +44,9 @@ export async function saveConversation(sessionId: string, messages: Array<{ role
 
 	let conversationId: string | null = null;
 	const existing = await supabase
-		.from('chat_conversations')
+		.from('ChatConversations')
 		.select('id')
-		.eq('session_id', sessionId)
+		.eq('sessionId', sessionId)
 		.maybeSingle();
 
 	if (existing.error) {
@@ -57,8 +57,8 @@ export async function saveConversation(sessionId: string, messages: Array<{ role
 
 	if (!conversationId) {
 		const created = await supabase
-			.from('chat_conversations')
-			.insert({ session_id: sessionId })
+			.from('ChatConversations')
+			.insert({ id: crypto.randomUUID(), sessionId: sessionId })
 			.select('id')
 			.single();
 		if (created.error) {
@@ -70,8 +70,9 @@ export async function saveConversation(sessionId: string, messages: Array<{ role
 
 	const latest = messages[messages.length - 1];
 	if (conversationId && latest) {
-		const { error } = await supabase.from('chat_messages').insert({
-			conversation_id: conversationId,
+		const { error } = await supabase.from('ChatMessages').insert({
+			id: crypto.randomUUID(),
+			conversationId: conversationId,
 			role: normalizeRole(latest.role),
 			content: latest.content
 		});

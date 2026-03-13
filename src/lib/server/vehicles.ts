@@ -10,24 +10,24 @@ export type VehicleRecord = {
 	year: number;
 	make: string;
 	model: string;
-	trim?: string | null;
+	trim: string | null;
 	bodyType: string;
-	exteriorColor?: string | null;
-	interiorColor?: string | null;
+	exteriorColor: string | null;
+	interiorColor: string | null;
 	mileage: number;
-	engine?: string | null;
-	transmission?: string | null;
-	drivetrain?: string | null;
+	engine: string | null;
+	transmission: string | null;
+	drivetrain: string | null;
 	price: number;
-	internetPrice?: number | null;
+	internetPrice: number | null;
 	condition: string;
 	status: string;
-	description?: string | null;
-	features?: string | string[];
-	carfaxUrl?: string | null;
-	autoCheckUrl?: string | null;
+	description: string | null;
+	features: string | string[];
+	carfaxUrl: string | null;
+	autoCheckUrl: string | null;
 	listedAt: string;
-	photos: { id: string; url: string; alt: string | null; isPrimary?: boolean }[];
+	photos: { id: string; url: string; alt: string | null; isPrimary: boolean }[];
 };
 
 type VehicleRow = {

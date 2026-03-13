@@ -7,9 +7,9 @@ export const load: PageServerLoad = async () => {
 	const supabase = adminClient();
 
 	const conversationsRes = await supabase
-		.from('chat_conversations')
-		.select('id,session_id,lead_id,created_at')
-		.order('created_at', { ascending: false })
+		.from('ChatConversations')
+		.select('id,sessionId,leadId,createdAt')
+		.order('createdAt', { ascending: false })
 		.limit(50);
 
 	if (conversationsRes.error) {
@@ -17,7 +17,7 @@ export const load: PageServerLoad = async () => {
 	}
 
 	const conversationIds = (conversationsRes.data ?? []).map((c) => c.id);
-	const leadIds = Array.from(new Set((conversationsRes.data ?? []).map((c) => c.lead_id).filter(Boolean))) as string[];
+	const leadIds = Array.from(new Set((conversationsRes.data ?? []).map((c) => c.leadId).filter(Boolean))) as string[];
 	const [messageCounts, leadMap] = await Promise.all([
 		fetchMessageCounts(conversationIds),
 		fetchLeadNames(leadIds)
@@ -26,10 +26,10 @@ export const load: PageServerLoad = async () => {
 	return {
 		conversations: (conversationsRes.data ?? []).map((c) => ({
 			id: c.id,
-			sessionId: c.session_id,
-			leadName: c.lead_id ? leadMap.get(c.lead_id) ?? null : null,
+			sessionId: c.sessionId,
+			leadName: c.leadId ? leadMap.get(c.leadId) ?? null : null,
 			messageCount: messageCounts.get(c.id) ?? 0,
-			createdAt: c.created_at
+			createdAt: c.createdAt
 		}))
 	};
 };
@@ -37,26 +37,26 @@ export const load: PageServerLoad = async () => {
 async function fetchMessageCounts(ids: string[]) {
 	if (!ids.length) return new Map<string, number>();
 	const { data, error } = await adminClient()
-		.from('chat_messages')
-		.select('conversation_id')
-		.in('conversation_id', ids);
+		.from('ChatMessages')
+		.select('conversationId')
+		.in('conversationId', ids);
 	if (error || !data) {
 		console.error('Failed to count chat messages', error?.message);
 		return new Map();
 	}
 	const counts = new Map<string, number>();
 	for (const row of data) {
-		counts.set(row.conversation_id, (counts.get(row.conversation_id) ?? 0) + 1);
+		counts.set(row.conversationId, (counts.get(row.conversationId) ?? 0) + 1);
 	}
 	return counts;
 }
 
 async function fetchLeadNames(ids: string[]) {
 	if (!ids.length) return new Map<string, string>();
-	const { data, error } = await adminClient().from('leads').select('id,first_name,last_name').in('id', ids);
+	const { data, error } = await adminClient().from('Leads').select('id,firstName,lastName').in('id', ids);
 	if (error || !data) {
 		console.error('Failed to load lead names', error?.message);
 		return new Map();
 	}
-	return new Map(data.map((lead) => [lead.id, `${lead.first_name} ${lead.last_name ?? ''}`.trim()]));
+	return new Map(data.map((lead) => [lead.id, `${lead.firstName} ${lead.lastName ?? ''}`.trim()]));
 }

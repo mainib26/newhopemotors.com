@@ -10,9 +10,9 @@ export const load: PageServerLoad = async () => {
 	const supabase = adminClient();
 
 	const applicationsRes = await supabase
-		.from('finance_applications')
-		.select('id,lead_id,first_name,last_name,email,phone,status,vehicle_id,created_at')
-		.order('created_at', { ascending: false })
+		.from('FinanceApplications')
+		.select('id,leadId,firstName,lastName,email,phone,status,vehicleId,createdAt')
+		.order('createdAt', { ascending: false })
 		.limit(50);
 
 	if (applicationsRes.error) {
@@ -20,19 +20,19 @@ export const load: PageServerLoad = async () => {
 	}
 
 	const vehicleMap = await fetchVehicleSummaries(
-		Array.from(new Set((applicationsRes.data ?? []).map((app) => app.vehicle_id).filter(Boolean))) as string[]
+		Array.from(new Set((applicationsRes.data ?? []).map((app) => app.vehicleId).filter(Boolean))) as string[]
 	);
 
 	return {
 		applications: (applicationsRes.data ?? []).map((a) => ({
 			id: a.id,
-			firstName: a.first_name,
-			lastName: a.last_name,
+			firstName: a.firstName,
+			lastName: a.lastName,
 			email: a.email,
 			phone: a.phone,
 			status: a.status,
-			vehicleInterest: a.vehicle_id ? formatVehicle(vehicleMap.get(a.vehicle_id)) : null,
-			createdAt: a.created_at
+			vehicleInterest: a.vehicleId ? formatVehicle(vehicleMap.get(a.vehicleId)) : null,
+			createdAt: a.createdAt
 		}))
 	};
 };
@@ -45,7 +45,7 @@ export const actions: Actions = {
 		if (!id || !FINANCE_STATUSES.includes(statusValue as FinanceStatus)) return fail(400);
 
 		const supabase = adminClient();
-		await supabase.from('finance_applications').update({ status: statusValue }).eq('id', id);
+		await supabase.from('FinanceApplications').update({ status: statusValue }).eq('id', id);
 		return { updated: true };
 	}
 };

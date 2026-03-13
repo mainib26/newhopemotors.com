@@ -5,9 +5,9 @@ const adminClient = () => getSupabaseAdminClient();
 
 export const load: PageServerLoad = async () => {
 	const { data, error } = await adminClient()
-		.from('pages')
-		.select('id,title,slug,published_at,updated_at')
-		.order('updated_at', { ascending: false });
+		.from('Page')
+		.select('id,title,slug,publishedAt,updatedAt')
+		.order('updatedAt', { ascending: false });
 
 	if (error) {
 		console.error('Failed to load pages', error.message);
@@ -18,8 +18,8 @@ export const load: PageServerLoad = async () => {
 			id: p.id,
 			title: p.title,
 			slug: p.slug,
-			published: Boolean(p.published_at),
-			updatedAt: p.updated_at
+			published: Boolean(p.publishedAt),
+			updatedAt: p.updatedAt
 		}))
 	};
 };

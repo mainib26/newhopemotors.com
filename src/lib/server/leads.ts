@@ -13,21 +13,22 @@ interface CreateLeadInput {
 
 export async function createLead(input: CreateLeadInput) {
 	const payload = {
-		first_name: input.firstName,
-		last_name: input.lastName || null,
+		id: crypto.randomUUID(),
+		firstName: input.firstName,
+		lastName: input.lastName || null,
 		email: input.email || null,
 		phone: input.phone || null,
 		message: input.message || null,
 		source: (input.source as LeadSource) || 'WEBSITE',
-		vehicle_id: input.vehicleId || null,
+		vehicleId: input.vehicleId || null,
 		status: 'NEW'
 	};
 
-	const row = await insertRow('leads', payload);
+	const row = await insertRow('Leads', payload);
 	return {
 		id: row.id as string,
-		firstName: (row.first_name as string) ?? input.firstName,
-		lastName: (row.last_name as string | null) ?? null,
+		firstName: (row.firstName as string) ?? input.firstName,
+		lastName: (row.lastName as string | null) ?? null,
 		email: (row.email as string | null) ?? null,
 		phone: (row.phone as string | null) ?? null,
 		source: (row.source as string) ?? payload.source,
