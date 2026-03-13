@@ -37,6 +37,12 @@
 				</div>
 			{/if}
 
+			{#if form?.resetSent}
+				<div class="p-3 bg-green-50 border border-green-200 rounded-[var(--radius-button)] text-sm text-green-700">
+					Password reset email sent. Check your inbox.
+				</div>
+			{/if}
+
 			<Input
 				label="Email"
 				name="email"
@@ -59,7 +65,25 @@
 			</Button>
 		</form>
 
-		<p class="text-center text-xs text-text-light mt-6">
+		<form
+			method="POST"
+			action="?/resetPassword"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ update }) => {
+					submitting = false;
+					await update();
+				};
+			}}
+			class="mt-3 text-center"
+		>
+			<input type="hidden" name="email" value={form?.email ?? ''} />
+			<button type="submit" class="text-xs text-text-muted hover:text-primary transition-colors">
+				Forgot password?
+			</button>
+		</form>
+
+		<p class="text-center text-xs text-text-light mt-4">
 			<a href="/" class="hover:text-primary">← Back to website</a>
 		</p>
 	</div>

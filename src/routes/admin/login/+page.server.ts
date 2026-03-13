@@ -37,5 +37,18 @@ export const actions: Actions = {
 		}
 
 		throw redirect(302, '/admin');
+	},
+
+	resetPassword: async ({ request, locals }) => {
+		const formData = await request.formData();
+		const email = formData.get('email')?.toString().trim() ?? '';
+
+		if (!email) {
+			return fail(400, { error: 'Enter your email first, then click Forgot password.', email });
+		}
+
+		await locals.supabase.auth.resetPasswordForEmail(email);
+
+		return { resetSent: true, email };
 	}
 };
