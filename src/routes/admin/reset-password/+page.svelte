@@ -1,82 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { createClient } from '@supabase/supabase-js';
+	import { enhance } from '$app/forms';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 
-	let { data } = $props();
-
+	let { data, form } = $props();
+	let submitting = $state(false);
 	let password = $state('');
 	let confirmPassword = $state('');
-	let error = $state('');
-	let success = $state(false);
-	let submitting = $state(false);
-	let ready = $state(false);
-
-	let supabase: ReturnType<typeof createClient> | null = null;
-
-	onMount(async () => {
-		supabase = createClient(data.supabaseUrl, data.supabaseAnonKey);
-
-		// Try token-based flow (hash fragment redirect)
-		const accessToken = $page.url.searchParams.get('access_token');
-		const refreshToken = $page.url.searchParams.get('refresh_token');
-
-		if (accessToken && refreshToken) {
-			const { error: sessionError } = await supabase.auth.setSession({
-				access_token: accessToken,
-				refresh_token: refreshToken
-			});
-			if (sessionError) {
-				error = 'This reset link has expired. Please request a new one.';
-				return;
-			}
-			ready = true;
-			return;
-		}
-
-		// PKCE flow — session was already established server-side via code exchange
-		const { data: sessionData } = await supabase.auth.getSession();
-		if (sessionData?.session) {
-			ready = true;
-			return;
-		}
-
-		error = 'Invalid or expired reset link. Please request a new one.';
-	});
-
-	async function handleSubmit(e: Event) {
-		e.preventDefault();
-		error = '';
-
-		if (password.length < 8) {
-			error = 'Password must be at least 8 characters.';
-			return;
-		}
-
-		if (password !== confirmPassword) {
-			error = 'Passwords do not match.';
-			return;
-		}
-
-		if (!supabase) return;
-
-		submitting = true;
-
-		const { error: updateError } = await supabase.auth.updateUser({ password });
-
-		submitting = false;
-
-		if (updateError) {
-			error = updateError.message;
-			return;
-		}
-
-		success = true;
-		setTimeout(() => goto('/admin/login'), 2000);
-	}
 </script>
 
 <svelte:head>
@@ -91,25 +21,31 @@
 		</div>
 
 		<div class="bg-surface border border-border rounded-[var(--radius-card)] p-6 space-y-4">
-			{#if success}
-				<div class="p-3 bg-green-50 border border-green-200 rounded-[var(--radius-button)] text-sm text-green-700">
-					Password updated successfully! Redirecting to login...
-				</div>
-			{:else if !ready && error}
+			{#if !data.hasSession}
 				<div class="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-button)] text-sm text-red-700">
-					{error}
+					Invalid or expired reset link. Please request a new one.
 				</div>
 				<a href="/admin/login" class="text-sm text-primary hover:underline">Back to login</a>
-			{:else if ready}
+			{:else}
 				<h2 class="text-lg font-heading font-bold text-text">Set New Password</h2>
 
-				{#if error}
+				{#if form?.error}
 					<div class="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-button)] text-sm text-red-700">
-						{error}
+						{form.error}
 					</div>
 				{/if}
 
-				<form onsubmit={handleSubmit} class="space-y-4">
+				<form
+					method="POST"
+					use:enhance={() => {
+						submitting = true;
+						return async ({ update }) => {
+							submitting = false;
+							await update();
+						};
+					}}
+					class="space-y-4"
+				>
 					<Input
 						label="New Password"
 						name="password"
@@ -132,8 +68,6 @@
 						{submitting ? 'Updating...' : 'Update Password'}
 					</Button>
 				</form>
-			{:else}
-				<p class="text-sm text-text-muted text-center">Verifying reset link...</p>
 			{/if}
 		</div>
 

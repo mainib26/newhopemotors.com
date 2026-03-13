@@ -8,10 +8,10 @@
 
 	let sidebarCollapsed = $state(false);
 
-	const isLoginPage = $derived(page.url.pathname === '/admin/login');
+	const isBarePage = $derived(page.url.pathname === '/admin/login' || page.url.pathname === '/admin/reset-password');
 </script>
 
-{#if isLoginPage}
+{#if isBarePage}
 	{@render children()}
 {:else}
 	<div class="flex h-screen bg-background overflow-hidden">

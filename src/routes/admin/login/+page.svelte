@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/stores';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 
 	let { form } = $props();
 	let submitting = $state(false);
 	let email = $state(form?.email ?? '');
+	let resetSuccess = $derived($page.url.searchParams.get('reset') === 'success');
 </script>
 
 <svelte:head>
@@ -32,6 +34,12 @@
 			class="bg-surface border border-border rounded-[var(--radius-card)] p-6 space-y-4"
 		>
 			<h2 class="text-lg font-heading font-bold text-text">Sign In</h2>
+
+			{#if resetSuccess}
+				<div class="p-3 bg-green-50 border border-green-200 rounded-[var(--radius-button)] text-sm text-green-700">
+					Password updated successfully. Sign in with your new password.
+				</div>
+			{/if}
 
 			{#if form?.error}
 				<div class="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-button)] text-sm text-red-700">
