@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 const adminClient = () => getSupabaseAdminClient();
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
+	login: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const email = formData.get('email')?.toString().trim() ?? '';
 		const password = formData.get('password')?.toString() ?? '';

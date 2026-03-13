@@ -20,6 +20,7 @@
 
 		<form
 			method="POST"
+			action="?/login"
 			use:enhance={() => {
 				submitting = true;
 				return async ({ update }) => {
