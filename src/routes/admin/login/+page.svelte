@@ -5,6 +5,7 @@
 
 	let { form } = $props();
 	let submitting = $state(false);
+	let email = $state(form?.email ?? '');
 </script>
 
 <svelte:head>
@@ -48,7 +49,7 @@
 				label="Email"
 				name="email"
 				type="email"
-				value={form?.email ?? ''}
+				bind:value={email}
 				placeholder="you@newhopemotors.com"
 				required
 			/>
@@ -78,7 +79,7 @@
 			}}
 			class="mt-3 text-center"
 		>
-			<input type="hidden" name="email" value={form?.email ?? ''} />
+			<input type="hidden" name="email" value={email} />
 			<button type="submit" class="text-xs text-text-muted hover:text-primary transition-colors">
 				Forgot password?
 			</button>
