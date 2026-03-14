@@ -98,8 +98,8 @@
 	{/if}
 
 	<!-- Main Content -->
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-		<div class="lg:grid lg:grid-cols-[1fr_380px] lg:gap-8">
+	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+		<div class="lg:grid lg:grid-cols-[minmax(0,640px)_380px] lg:gap-8">
 			<!-- Left Column -->
 			<div class="space-y-8">
 				<PhotoGallery photos={v.photos} {vehicleName} />

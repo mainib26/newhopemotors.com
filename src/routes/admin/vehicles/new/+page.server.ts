@@ -15,7 +15,11 @@ export const actions: Actions = {
     const make = formData.get('make')?.toString().trim() ?? '';
     const model = formData.get('model')?.toString().trim() ?? '';
     const price = parseFloat(formData.get('price')?.toString() ?? '');
+    const vin = formData.get('vin')?.toString().trim() ?? '';
+    const trim = formData.get('trim')?.toString().trim() ?? '';
 
+    if (!vin) errors.vin = 'VIN is required';
+    else if (vin.length !== 17) errors.vin = 'VIN must be 17 characters';
     if (!year || year < 1900 || year > 2035) errors.year = 'Valid year required';
     if (!make) errors.make = 'Make is required';
     if (!model) errors.model = 'Model is required';
@@ -24,9 +28,6 @@ export const actions: Actions = {
     if (Object.keys(errors).length > 0) {
       return fail(400, { errors });
     }
-
-    const vin = formData.get('vin')?.toString().trim() ?? '';
-    const trim = formData.get('trim')?.toString().trim() ?? '';
     const features = formData
       .get('features')
       ?.toString()
@@ -35,8 +36,8 @@ export const actions: Actions = {
       .filter(Boolean) ?? [];
 
     const vehicle = await createAdminVehicle({
-      vin: vin || null,
-      stockNumber: formData.get('stockNumber')?.toString().trim() || null,
+      vin,
+      stockNumber: vin.slice(-8).toUpperCase(),
       year,
       make,
       model,

@@ -256,10 +256,13 @@ export async function getAdminVehicle(id: string): Promise<AdminVehicle> {
 
 export async function createAdminVehicle(payload: VehiclePayload): Promise<AdminVehicle> {
 	const client = supabase();
+  const now = new Date().toISOString();
   const insertPayload = {
     id: crypto.randomUUID(),
     ...payload,
-    features: JSON.stringify(payload.features ?? [])
+    features: JSON.stringify(payload.features ?? []),
+    createdAt: now,
+    updatedAt: now
   };
 
   const { data, error } = await client.from('Vehicles').insert(insertPayload).select(VEHICLE_SELECT).single();
@@ -273,7 +276,8 @@ export async function updateAdminVehicle(id: string, payload: VehiclePayload): P
 	const client = supabase();
   const updatePayload = {
     ...payload,
-    features: JSON.stringify(payload.features ?? [])
+    features: JSON.stringify(payload.features ?? []),
+    updatedAt: new Date().toISOString()
   };
 
   const { data, error } = await client

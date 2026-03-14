@@ -37,7 +37,7 @@
 	let internetPrice = $state('');
 	let description = $state('');
 	let features = $state('');
-	let stockNumber = $state('');
+
 	let decoding = $state(false);
 
 	const selectClass = 'w-full px-4 py-2.5 text-sm border border-border rounded-[var(--radius-input)] bg-surface text-text focus:outline-none focus:ring-2 focus:ring-primary appearance-none';
@@ -105,6 +105,40 @@
 	function removePhoto(index: number) {
 		URL.revokeObjectURL(photos[index].preview);
 		photos = photos.filter((_, i) => i !== index);
+	}
+
+	// Photo reordering via drag
+	let dragIndex = $state<number | null>(null);
+	let dropTarget = $state<number | null>(null);
+
+	function onPhotoDragStart(index: number, e: DragEvent) {
+		dragIndex = index;
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', String(index));
+		}
+	}
+
+	function onPhotoDragOver(index: number, e: DragEvent) {
+		if (dragIndex === null || dragIndex === index) return;
+		e.preventDefault();
+		dropTarget = index;
+	}
+
+	function onPhotoDrop(index: number, e: DragEvent) {
+		e.preventDefault();
+		if (dragIndex === null || dragIndex === index) return;
+		const reordered = [...photos];
+		const [moved] = reordered.splice(dragIndex, 1);
+		reordered.splice(index, 0, moved);
+		photos = reordered;
+		dragIndex = null;
+		dropTarget = null;
+	}
+
+	function onPhotoDragEnd() {
+		dragIndex = null;
+		dropTarget = null;
 	}
 
 	function handleDrop(e: DragEvent) {
@@ -204,9 +238,12 @@
 			if (get(26)) make = get(26);
 			if (get(28)) model = get(28);
 			if (get(38)) trim = get(38);
-			const displacement = get(11);
+			const displacementCC = get(11);
 			const cylinders = get(9);
-			if (displacement) engine = `${displacement}L ${cylinders ? cylinders + '-Cyl' : ''}`.trim();
+			if (displacementCC) {
+				const liters = (parseFloat(displacementCC) / 1000).toFixed(1);
+				engine = `${liters}L${cylinders ? ` ${cylinders}-Cyl` : ''}`;
+			}
 		} catch {
 			// VIN decode failed silently
 		} finally {
@@ -232,6 +269,8 @@
 
 	function proceedToDetails() {
 		step2Errors = {};
+		if (!vin.trim()) step2Errors.vin = 'VIN is required';
+		else if (vin.trim().length !== 17) step2Errors.vin = 'VIN must be 17 characters';
 		if (!year || parseInt(year) < 1900 || parseInt(year) > 2030) step2Errors.year = 'Valid year required';
 		if (!make.trim()) step2Errors.make = 'Make is required';
 		if (!model.trim()) step2Errors.model = 'Model is required';
@@ -298,8 +337,17 @@
 				{#if photos.length > 0}
 					<div class="mt-5 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
 						{#each photos as photo, i}
-							<div class="relative group aspect-square rounded-lg overflow-hidden bg-cream">
-								<img src={photo.preview} alt="Vehicle photo {i + 1}" class="w-full h-full object-cover" />
+							<div
+								class="relative group aspect-square rounded-lg overflow-hidden bg-cream cursor-grab active:cursor-grabbing transition-all {dragIndex === i ? 'opacity-40 scale-95' : ''} {dropTarget === i ? 'ring-2 ring-primary ring-offset-2' : ''}"
+								draggable="true"
+								ondragstart={(e) => onPhotoDragStart(i, e)}
+								ondragover={(e) => onPhotoDragOver(i, e)}
+								ondrop={(e) => onPhotoDrop(i, e)}
+								ondragend={onPhotoDragEnd}
+								ondragleave={() => { if (dropTarget === i) dropTarget = null; }}
+								role="listitem"
+							>
+								<img src={photo.preview} alt="Vehicle photo {i + 1}" class="w-full h-full object-cover pointer-events-none" />
 								<button
 									type="button"
 									class="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -387,7 +435,7 @@
 				<div class="max-w-lg mx-auto mb-6">
 					<div class="flex gap-2">
 						<div class="flex-1">
-							<Input label="VIN" name="vin" bind:value={vin} placeholder="Enter 17-character VIN" maxlength={17} />
+							<Input label="VIN" name="vin" bind:value={vin} placeholder="Enter 17-character VIN" maxlength={17} required error={step2Errors.vin} />
 						</div>
 						<div class="self-end">
 							<Button type="button" onclick={decodeVin} disabled={vin.length !== 17 || decoding}>
@@ -415,7 +463,7 @@
 
 				<!-- Body type selector -->
 				<div class="mt-5">
-					<label class="block text-sm font-medium text-text mb-2">Body Type</label>
+					<span class="block text-sm font-medium text-text mb-2">Body Type</span>
 					<div class="flex flex-wrap gap-2">
 						{#each bodyTypes.slice(1) as bt}
 							<button
@@ -509,7 +557,10 @@
 									</Button>
 								</div>
 							</div>
-							<Input label="Stock Number" name="stockNumber" bind:value={stockNumber} placeholder="e.g. NH2401" error={form?.errors?.stockNumber} />
+							<div>
+								<span class="block text-sm font-medium text-text mb-1">Stock Number</span>
+								<span class="text-sm text-text-muted">{vin.length >= 8 ? vin.slice(-8).toUpperCase() : '—'}</span>
+							</div>
 						</div>
 					</div>
 				{:else}
@@ -526,13 +577,10 @@
 									{/if}
 								</h3>
 								{#if vin}
-									<p class="text-xs text-text-muted mt-0.5">VIN: {vin}</p>
+									<p class="text-xs text-text-muted mt-0.5">VIN: {vin} · Stock #: {vin.slice(-8).toUpperCase()}</p>
 								{/if}
 							</div>
 							<button type="button" class="text-xs text-primary hover:underline" onclick={() => step = 2}>Edit</button>
-						</div>
-						<div class="border-t border-border pt-4">
-							<Input label="Stock Number" name="stockNumber" bind:value={stockNumber} placeholder="e.g. NH2401" error={form?.errors?.stockNumber} />
 						</div>
 					</div>
 				{/if}
